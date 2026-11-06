@@ -2,13 +2,14 @@ package com.jorge.playlistconverter.service;
 
 import com.jorge.playlistconverter.converter.preview.InMemoryPlaylistPreviewStore;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class PlaylistCancellationService {
     private final InMemoryPlaylistPreviewStore previewStore;
 
     public PlaylistCancellationService(InMemoryPlaylistPreviewStore previewStore) {
-        this.previewStore = previewStore;
+        this.previewStore = Objects.requireNonNull(previewStore);
     }
 
     public void cancel(UUID previewId){

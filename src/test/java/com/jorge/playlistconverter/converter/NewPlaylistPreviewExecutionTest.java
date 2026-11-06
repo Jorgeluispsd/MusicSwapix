@@ -8,6 +8,7 @@ import com.jorge.playlistconverter.converter.history.TrackSyncRecorder;
 import com.jorge.playlistconverter.converter.preview.PlaylistPreview;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.enums.SyncRunStatus;
+import com.jorge.playlistconverter.errors.conversion.NoTracksToInsertException;
 import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
 import com.jorge.playlistconverter.errors.youtube.YoutubePlaylistCreationException;
 import com.jorge.playlistconverter.errors.youtube.YoutubeTrackInsertionException;
@@ -232,7 +233,7 @@ class NewPlaylistPreviewExecutionTest {
         for (PlaylistPreview preview :
                 List.of(preview(), preview(missing))) {
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(NoTracksToInsertException.class,
                     () -> converter.executeNewPlaylistPreview(
                             preview, "Meu Rock"));
         }

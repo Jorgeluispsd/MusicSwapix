@@ -4,6 +4,7 @@ import com.jorge.playlistconverter.service.PlaylistCancellationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -13,7 +14,7 @@ public class PlaylistCancellationController {
     private final PlaylistCancellationService cancellationService;
 
     public PlaylistCancellationController(PlaylistCancellationService cancellationService){
-        this.cancellationService = cancellationService;
+        this.cancellationService = Objects.requireNonNull(cancellationService);
     }
 
     @DeleteMapping("/{previewId}")

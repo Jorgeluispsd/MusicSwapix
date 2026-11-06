@@ -3,9 +3,13 @@ package com.jorge.playlistconverter.errors.http;
 
 import com.jorge.playlistconverter.dto.response.ApiErrorResponse;
 import com.jorge.playlistconverter.dto.response.FieldValidationErrorResponse;
+import com.jorge.playlistconverter.errors.authorization.AuthorizationDeniedException;
+import com.jorge.playlistconverter.errors.authorization.AuthorizationTimeoutException;
+import com.jorge.playlistconverter.errors.conversion.NoTracksToInsertException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewChangedException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
 import com.jorge.playlistconverter.errors.input.InvalidPlaylistInputException;
+import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyPlaylistReadException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyRequestLimitException;
 import com.jorge.playlistconverter.errors.youtube.*;
@@ -149,8 +153,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleYoutubePlaylistCreation(HttpServletRequest request){
         return platformFailure("YOUTUBE_PLAYLIST_CREATION_FAILED",
                 "Não foi possível confirmar a criação da playlist no YouTube. "
-                        + "Confira sua conta antes de tentar criar outra.",
-                request);
+                        + "Confira sua conta antes de tentar criar outra.", request);
     }
 
     @ExceptionHandler(YoutubeTrackInsertionException.class)
@@ -158,14 +161,52 @@ public class ApiExceptionHandler {
         return platformFailure("YOUTUBE_TRACK_INSERTION_FAILED",
                 "Não foi possível concluir a inserção das músicas no YouTube. "
                         + "Algumas músicas podem ter sido inseridas. "
-                        + "Confira o destino e gere uma nova prévia antes de continuar.",
+                        + "Confira o destino e gere uma nova prévia antes de continuar.", request);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthorizationDenied(HttpServletRequest request){
+        return errorResponse(HttpStatus.FORBIDDEN,
+                "AUTHORIZATION_DENIED",
+                "O acesso à plataforma foi recusado. Autorize o acesso em uma nova tentativa.",
                 request);
     }
 
-    private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){
-        ApiErrorResponse response = new ApiErrorResponse(HttpStatus.BAD_GATEWAY.value(),
-                code, message, request.getRequestURI(), List.of());
+    @ExceptionHandler(AuthorizationTimeoutException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthorizationTimeout(HttpServletRequest request){
+        return errorResponse(HttpStatus.GATEWAY_TIMEOUT,
+                "AUTHORIZATION_TIMEOUT",
+                "O tempo para autorizar o acesso à plataforma acabou. Inicie uma nova tentativa.",
+                request);
+    }
 
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(response);
+    @ExceptionHandler(SyncStateStorageException.class)
+    public ResponseEntity<ApiErrorResponse> handleSyncStateStoreFailure(HttpServletRequest request){
+        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "SYNC_STATE_STORAGE_FAILED",
+                "Não foi possível salvar o histórico da conversão. "
+                        + "Confira a playlist de destino antes de tentar novamente, "
+                        + "pois alterações podem já ter sido feitas.", request);
+    }
+
+    @ExceptionHandler(NoTracksToInsertException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoTracksToInsert(HttpServletRequest request){
+        return errorResponse(HttpStatus.UNPROCESSABLE_CONTENT,
+                "NO_TRACKS_TO_INSERT",
+                "A prévia não possui músicas encontradas para adicionar. "
+                        + "Escolha outra playlist de origem e gere uma nova prévia.", request);
+    }
+
+    private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){
+
+        return errorResponse(HttpStatus.BAD_GATEWAY, code, message, request);
+    }
+
+    private ResponseEntity<ApiErrorResponse> errorResponse(HttpStatus status, String code,
+                                                           String message, HttpServletRequest request){
+        ApiErrorResponse response = new ApiErrorResponse(status.value(), code, message,
+                request.getRequestURI(), List.of());
+
+        return ResponseEntity.status(status).body(response);
     }
 }

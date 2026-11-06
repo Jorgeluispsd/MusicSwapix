@@ -4,6 +4,8 @@ import com.jorge.playlistconverter.converter.ConversionResult;
 import com.jorge.playlistconverter.dto.response.ApiErrorResponse;
 import com.jorge.playlistconverter.dto.response.PlaylistConversionResponse;
 import com.jorge.playlistconverter.dto.response.UnmatchedTrackResponse;
+import com.jorge.playlistconverter.errors.authorization.AuthorizationDeniedException;
+import com.jorge.playlistconverter.errors.authorization.AuthorizationTimeoutException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewChangedException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
 import com.jorge.playlistconverter.errors.http.ApiExceptionHandler;
@@ -19,9 +21,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.json.JsonMapper;
+import com.jorge.playlistconverter.errors.conversion.NoTracksToInsertException;
+import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
+
+import java.sql.SQLException;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -245,6 +252,76 @@ class PlaylistConfirmationControllerTest {
         assertFalse(body.contains("causa-interna-simulada"));
 
         verify(confirmationService, times(1)).confirm(PREVIEW_ID);
+        verifyNoMoreInteractions(confirmationService);
+    }
+
+    @Test
+    void shouldReturnForbiddenWhenAuthorizationIsDenied() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID))
+                .thenThrow(new AuthorizationDeniedException("detalhe-interno"));
+
+        assertConfirmationFailure(403,
+                "AUTHORIZATION_DENIED",
+                "O acesso à plataforma foi recusado. Autorize o acesso em uma nova tentativa.");
+    }
+
+    @Test
+    void shouldReturnGatewayTimeoutWhenAuthorizationExpires() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID))
+                .thenThrow(new AuthorizationTimeoutException(
+                        "detalhe-interno",
+                        new TimeoutException("causa-interna")));
+
+        assertConfirmationFailure(504,
+                "AUTHORIZATION_TIMEOUT",
+                "O tempo para autorizar o acesso à plataforma acabou. Inicie uma nova tentativa.");
+    }
+    @Test
+    void shouldReturnInternalServerErrorWhenSyncHistoryFails() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID))
+                .thenThrow(new SyncStateStorageException(
+                        "detalhe-interno",
+                        new SQLException("causa-interna")));
+
+        assertConfirmationFailure(
+                500,
+                "SYNC_STATE_STORAGE_FAILED",
+                "Não foi possível salvar o histórico da conversão. "
+                        + "Confira a playlist de destino antes de tentar novamente, "
+                        + "pois alterações podem já ter sido feitas.");
+    }
+
+    @Test
+    void shouldReturnUnprocessableContentWhenPreviewHasNoTracksToInsert() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID))
+                .thenThrow(new NoTracksToInsertException("detalhe-interno"));
+
+        assertConfirmationFailure(
+                422,
+                "NO_TRACKS_TO_INSERT",
+                "A prévia não possui músicas encontradas para adicionar. "
+                        + "Escolha outra playlist de origem e gere uma nova prévia.");
+    }
+
+    private void assertConfirmationFailure(int expectedStatus, String expectedCode,
+                                           String expectedMessage) throws Exception {
+        var result = mockMvc.perform(post(CONFIRM_URL))
+                .andExpect(status().is(expectedStatus))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+        ApiErrorResponse response = jsonMapper.readValue(body, ApiErrorResponse.class);
+
+        assertEquals(expectedStatus, response.status());
+        assertEquals(expectedCode, response.code());
+        assertEquals(expectedMessage, response.message());
+        assertEquals(CONFIRM_URL, response.path());
+        assertTrue(response.fieldErrors().isEmpty());
+        assertFalse(body.contains("detalhe-interno"));
+        assertFalse(body.contains("causa-interna"));
+
+        verify(confirmationService).confirm(PREVIEW_ID);
         verifyNoMoreInteractions(confirmationService);
     }
 }

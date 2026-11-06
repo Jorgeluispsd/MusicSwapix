@@ -2,6 +2,7 @@ package com.jorge.playlistconverter.converter;
 
 import com.jorge.playlistconverter.converter.preview.PlaylistPreview;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
+import com.jorge.playlistconverter.errors.conversion.NoTracksToInsertException;
 
 import java.util.Objects;
 
@@ -21,7 +22,7 @@ public class PlaylistConversionValidator {
         }
 
         if (preview.newTrackCount() == 0){
-            throw new IllegalArgumentException(
+            throw new NoTracksToInsertException(
                     "A prévia não possui músicas encontradas para adicionar.");
         }
     }

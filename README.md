@@ -1,6 +1,6 @@
 # 🎵 Conversor de Playlists
 
-Ferramenta em Java para migrar playlists entre **Spotify** e **YouTube Music**, nos dois sentidos, evitando duplicar músicas em conversões repetidas.
+Ferramenta em Java para converter playlists do **Spotify para o YouTube**, com prévia antes de adicionar músicas. A conversão inversa está planejada.
 
 ## 💡 Motivação
 
@@ -20,18 +20,21 @@ Em desenvolvimento — construído em fases, cada uma validada antes de avançar
 - [x] Persistência do histórico (H2) e prevenção de duplicatas
 - [x] Leitura de playlists do YouTube
 - [x] Tratamento específico de quota YouTube e de HTTP 429 Spotify
-- [x] 36 testes automatizados aprovados (13/10/2026)
-- [ ] Conversão real (Spotify → YouTube Music)
-- [ ] Conversão inversa (YouTube Music → Spotify)
-- [ ] Interface web com prévia, revisão e confirmação (Fase 9)
+- [x] Conversão Spotify → YouTube para playlist nova ou existente
+- [x] API local para consultar destinos anteriores, gerar prévia, confirmar e cancelar
+- [ ] Interface básica em Angular
+- [ ] Distribuição local com PostgreSQL e Docker Compose
+- [ ] Conversão inversa (YouTube → Spotify)
 
 ## ⚙️ Como funciona
 
-A arquitetura é pensada para suportar as duas direções de conversão: `SpotifyMusicService` e `YoutubeMusicService` implementam a interface `MusicService`. Leitura, busca no YouTube, matching e persistência já existem como componentes. OAuth Google e criação de playlists YouTube com visibilidade configurável já foram validados. Inserção de faixas e o orquestrador `PlaylistConverter` seguem pendentes na Fase 6; retomada e recuperação da ordem serão detalhadas na Fase 8.
+O conversor lê a playlist de origem e gera uma prévia com as correspondências, as músicas já presentes e as faixas sem correspondência. Depois da confirmação, cria a playlist ou adiciona os vídeos encontrados ao destino escolhido. O histórico registra os vínculos entre playlists e as inserções confirmadas.
 
 ```
 model/       -> Song, MatchResult — estruturas de dados comuns aos dois serviços
 service/     -> MusicService — contrato comum entre Spotify e YouTube
+controller/  -> endpoints da API local
+converter/   -> análise, prévias, execução e histórico de conversões
 spotify/     -> implementação do lado Spotify
 youtube/     -> implementação do lado YouTube
 matcher/     -> lógica de similaridade para encontrar a música equivalente
@@ -42,7 +45,7 @@ errors/      -> exceções por autorização, Spotify, YouTube e persistência
 config/      -> configuração dos clientes de API (injeção de dependência via Spring)
 ```
 
-O matcher compara os candidatos e aplica penalidades para versões diferentes. Sua pontuação indica semelhança, sem garantir que o áudio seja o mesmo. A revisão e confirmação pelo usuário estão planejadas para a Fase 9.
+O matcher compara os candidatos e aplica regras para versões diferentes. A pontuação indica semelhança entre os dados disponíveis. A prévia mostra o candidato selecionado para cada faixa encontrada.
 
 ## 🛠️ Tecnologias
 
@@ -86,13 +89,15 @@ O matcher compara os candidatos e aplica penalidades para versões diferentes. S
    mvn spring-boot:run
    ```
 
-Os `CommandLineRunner` atuais são laboratórios manuais: habilite apenas o cenário que deseja validar. Executar a aplicação ainda não realiza uma conversão completa. O `main` configura `headless=false` para permitir abertura do navegador no ambiente local; a sessão Spotify salva é reutilizada nas execuções seguintes.
+Para operações que exigem autorização do YouTube, configure um cliente OAuth do tipo **App para computador** no Google Cloud e salve seu JSON em `~/.playlist-converter/google-client-secret.json`. Se o app estiver em teste, inclua a conta usada na lista de usuários de teste.
+
+A aplicação inicia a API em `127.0.0.1:8080` por padrão. Consulte o [guia da API local](docs/API.md) para testar o fluxo no Postman. O runner interativo pode ser habilitado com `playlist.converter.manual-runner.enabled=true`. A aplicação pode abrir o navegador local para autorização e reutiliza as sessões salvas quando disponíveis.
 
 ### Testes e banco local
 
-Execute `mvn test` para rodar os 36 testes. Se `mvn` não estiver no PATH, use o Maven do IntelliJ: pressione Ctrl duas vezes e execute `mvn test` pelo Run Anything.
+Execute `mvn test` para rodar a suíte. Se `mvn` não estiver no PATH, pressione Ctrl duas vezes no IntelliJ e execute `mvn test` pelo Run Anything.
 
-Os testes usam mocks e um banco H2 temporário, sem chamadas reais às APIs nem acesso ao banco pessoal. A suíte inclui 19 testes do matcher, 4 do serviço Spotify, 4 do callback, 3 da persistência H2 e 6 do serviço YouTube.
+Os testes automatizados usam mocks e um banco H2 temporário para validar o fluxo sem acessar as APIs externas ou o banco pessoal.
 
 Os dados locais ficam em `~/.playlist-converter/`: `spotify_tokens.json` guarda a sessão e o banco usa o caminho base `data.db` (o H2 acrescenta sua extensão ao arquivo). O console H2 informa seu link nos logs da aplicação. Use a URL JDBC `jdbc:h2:~/.playlist-converter/data.db` e as mesmas credenciais usadas na criação do banco. Mantenha a aplicação rodando e execute, por exemplo:
 
