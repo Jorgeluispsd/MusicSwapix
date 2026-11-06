@@ -8,6 +8,7 @@ import com.jorge.playlistconverter.input.SpotifyPlaylistParser;
 import com.jorge.playlistconverter.input.YoutubePlaylistParser;
 import com.jorge.playlistconverter.mapper.PlaylistConversionResponseMapper;
 import com.jorge.playlistconverter.mapper.PlaylistPreviewResponseMapper;
+import com.jorge.playlistconverter.service.PlaylistCancellationService;
 import com.jorge.playlistconverter.service.PlaylistConfirmationService;
 import com.jorge.playlistconverter.service.PlaylistPreviewService;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,5 +51,10 @@ public class PlaylistPreviewConfig {
     @Bean
     public PlaylistConversionResponseMapper playlistConversionResponseMapper() {
         return new PlaylistConversionResponseMapper();
+    }
+
+    @Bean
+    public PlaylistCancellationService playlistCancellationService(InMemoryPlaylistPreviewStore previewStore){
+        return new PlaylistCancellationService(previewStore);
     }
 }
