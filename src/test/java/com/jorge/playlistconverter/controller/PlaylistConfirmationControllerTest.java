@@ -7,6 +7,8 @@ import com.jorge.playlistconverter.dto.response.UnmatchedTrackResponse;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewChangedException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
 import com.jorge.playlistconverter.errors.http.ApiExceptionHandler;
+import com.jorge.playlistconverter.errors.youtube.YoutubePlaylistCreationException;
+import com.jorge.playlistconverter.errors.youtube.YoutubeTrackInsertionException;
 import com.jorge.playlistconverter.mapper.PlaylistConversionResponseMapper;
 import com.jorge.playlistconverter.model.MatchResult;
 import com.jorge.playlistconverter.model.Song;
@@ -173,6 +175,74 @@ class PlaylistConfirmationControllerTest {
         assertEquals(CONFIRM_URL, response.path());
         assertTrue(response.fieldErrors().isEmpty());
         assertFalse(body.contains("detalhe-interno-da-alteracao"));
+
+        verify(confirmationService, times(1)).confirm(PREVIEW_ID);
+        verifyNoMoreInteractions(confirmationService);
+    }
+
+    @Test
+    void shouldReturnBadGatewayWhenPlaylistCreationFails() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID))
+                .thenThrow(new YoutubePlaylistCreationException(
+                        "detalhe-interno-da-criacao",
+                        new IllegalStateException("causa-interna-simulada")));
+
+        var result = mockMvc.perform(post(CONFIRM_URL))
+                .andExpect(status().isBadGateway())
+                .andExpect(content().contentTypeCompatibleWith(
+                        MediaType.APPLICATION_JSON))
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+
+        ApiErrorResponse response = jsonMapper.readValue(
+                body, ApiErrorResponse.class);
+
+        assertEquals(502, response.status());
+        assertEquals("YOUTUBE_PLAYLIST_CREATION_FAILED", response.code());
+        assertEquals(
+                "Não foi possível confirmar a criação da playlist no YouTube. "
+                        + "Confira sua conta antes de tentar criar outra.",
+                response.message());
+        assertEquals(CONFIRM_URL, response.path());
+        assertTrue(response.fieldErrors().isEmpty());
+
+        assertFalse(body.contains("detalhe-interno-da-criacao"));
+        assertFalse(body.contains("causa-interna-simulada"));
+
+        verify(confirmationService, times(1)).confirm(PREVIEW_ID);
+        verifyNoMoreInteractions(confirmationService);
+    }
+
+    @Test
+    void shouldReturnBadGatewayWhenTrackInsertionFails() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID))
+                .thenThrow(new YoutubeTrackInsertionException(
+                        "detalhe-interno-da-insercao",
+                        new IllegalStateException("causa-interna-simulada")));
+
+        var result = mockMvc.perform(post(CONFIRM_URL))
+                .andExpect(status().isBadGateway())
+                .andExpect(content().contentTypeCompatibleWith(
+                        MediaType.APPLICATION_JSON))
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+
+        ApiErrorResponse response = jsonMapper.readValue(body, ApiErrorResponse.class);
+
+        assertEquals(502, response.status());
+        assertEquals("YOUTUBE_TRACK_INSERTION_FAILED", response.code());
+        assertEquals(
+                "Não foi possível concluir a inserção das músicas no YouTube. "
+                        + "Algumas músicas podem ter sido inseridas. "
+                        + "Confira o destino e gere uma nova prévia antes de continuar.",
+                response.message());
+        assertEquals(CONFIRM_URL, response.path());
+        assertTrue(response.fieldErrors().isEmpty());
+
+        assertFalse(body.contains("detalhe-interno-da-insercao"));
+        assertFalse(body.contains("causa-interna-simulada"));
 
         verify(confirmationService, times(1)).confirm(PREVIEW_ID);
         verifyNoMoreInteractions(confirmationService);

@@ -8,9 +8,7 @@ import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableE
 import com.jorge.playlistconverter.errors.input.InvalidPlaylistInputException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyPlaylistReadException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyRequestLimitException;
-import com.jorge.playlistconverter.errors.youtube.YoutubePlaylistReadException;
-import com.jorge.playlistconverter.errors.youtube.YoutubeQuotaExceededException;
-import com.jorge.playlistconverter.errors.youtube.YoutubeSearchException;
+import com.jorge.playlistconverter.errors.youtube.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -145,6 +143,23 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleYoutubeSearch(HttpServletRequest request){
         return platformFailure("YOUTUBE_SEARCH_FAILED",
                 "Não foi possível concluir a busca de músicas no YouTube.", request);
+    }
+
+    @ExceptionHandler(YoutubePlaylistCreationException.class)
+    public ResponseEntity<ApiErrorResponse> handleYoutubePlaylistCreation(HttpServletRequest request){
+        return platformFailure("YOUTUBE_PLAYLIST_CREATION_FAILED",
+                "Não foi possível confirmar a criação da playlist no YouTube. "
+                        + "Confira sua conta antes de tentar criar outra.",
+                request);
+    }
+
+    @ExceptionHandler(YoutubeTrackInsertionException.class)
+    public ResponseEntity<ApiErrorResponse> handleYoutubeTrackInsertion(HttpServletRequest request){
+        return platformFailure("YOUTUBE_TRACK_INSERTION_FAILED",
+                "Não foi possível concluir a inserção das músicas no YouTube. "
+                        + "Algumas músicas podem ter sido inseridas. "
+                        + "Confira o destino e gere uma nova prévia antes de continuar.",
+                request);
     }
 
     private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){
