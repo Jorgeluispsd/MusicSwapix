@@ -3,6 +3,7 @@ package com.jorge.playlistconverter.config;
 import com.jorge.playlistconverter.converter.ConversionResult;
 import com.jorge.playlistconverter.converter.PlaylistConversionValidator;
 import com.jorge.playlistconverter.converter.PlaylistConverter;
+import com.jorge.playlistconverter.converter.history.PlaylistDestinationRegistry;
 import com.jorge.playlistconverter.converter.preview.InMemoryPlaylistPreviewStore;
 import com.jorge.playlistconverter.converter.preview.PlaylistPreview;
 import com.jorge.playlistconverter.converter.preview.StoredPlaylistPreview;
@@ -37,6 +38,9 @@ class PlaylistPreviewConfigTest {
         contextRunner = new ApplicationContextRunner()
                 .withUserConfiguration(PlaylistPreviewConfig.class)
                 .withBean(PlaylistConverter.class, () -> converter)
+                .withBean(
+                        PlaylistDestinationRegistry.class,
+                        () -> mock(PlaylistDestinationRegistry.class))
                 .withBean(
                         SpotifyPlaylistParser.class,
                         SpotifyPlaylistParser::new)
