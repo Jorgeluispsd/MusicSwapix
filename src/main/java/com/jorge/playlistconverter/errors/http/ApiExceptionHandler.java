@@ -8,6 +8,7 @@ import com.jorge.playlistconverter.errors.authorization.AuthorizationTimeoutExce
 import com.jorge.playlistconverter.errors.conversion.NoTracksToInsertException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewChangedException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
+import com.jorge.playlistconverter.errors.input.InvalidHistoryPaginationException;
 import com.jorge.playlistconverter.errors.input.InvalidPlaylistInputException;
 import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyPlaylistReadException;
@@ -182,11 +183,18 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(SyncStateStorageException.class)
     public ResponseEntity<ApiErrorResponse> handleSyncStateStoreFailure(HttpServletRequest request){
+        String message = "Não foi possível salvar o histórico da conversão. "
+                + "Confira a playlist de destino antes de tentar novamente, "
+                + "pois alterações podem já ter sido feitas.";
+
+        if ("GET".equals(request.getMethod())){
+            message = "Não foi possível consultar o histórico local. "
+                    + "Tente novamente mais tarde.";
+        }
+
         return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "SYNC_STATE_STORAGE_FAILED",
-                "Não foi possível salvar o histórico da conversão. "
-                        + "Confira a playlist de destino antes de tentar novamente, "
-                        + "pois alterações podem já ter sido feitas.", request);
+                message, request);
     }
 
     @ExceptionHandler(NoTracksToInsertException.class)
@@ -195,6 +203,13 @@ public class ApiExceptionHandler {
                 "NO_TRACKS_TO_INSERT",
                 "A prévia não possui músicas encontradas para adicionar. "
                         + "Escolha outra playlist de origem e gere uma nova prévia.", request);
+    }
+
+    @ExceptionHandler(InvalidHistoryPaginationException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidHistoryPagination(HttpServletRequest request){
+        return errorResponse(HttpStatus.BAD_REQUEST,
+                "INVALID_HISTORY_PAGINATION",
+                "Informe um limite entre 1 e 100 e um deslocamento maior ou igual a zero.", request);
     }
 
     private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){
