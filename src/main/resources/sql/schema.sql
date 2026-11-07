@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS sync_run (
     sync_job_id INTEGER NOT NULL,
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
+    status VARCHAR(20),
     FOREIGN KEY (sync_job_id) REFERENCES sync_job(id)
     );
 

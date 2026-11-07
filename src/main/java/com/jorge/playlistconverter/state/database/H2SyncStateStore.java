@@ -4,6 +4,7 @@ import com.jorge.playlistconverter.enums.SyncRunStatus;
 import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
 import com.jorge.playlistconverter.model.Song;
 import com.jorge.playlistconverter.model.SyncJob;
+import com.jorge.playlistconverter.model.SyncRunHistory;
 import com.jorge.playlistconverter.state.SyncStateStore;
 import com.jorge.playlistconverter.state.sql.SqlResourceLoader;
 
@@ -23,6 +24,7 @@ public class H2SyncStateStore implements SyncStateStore {
     private static final String START_SYNC_RUN_PATH = "sql/queries/start_sync_run.sql";
     private static final String FINISH_SYNC_RUN_PATH = "sql/queries/finish_sync_run.sql";
     private static final String FIND_SYNC_JOBS_BY_SOURCE_PATH = "sql/queries/find_sync_jobs_by_source.sql";
+    private static final String FIND_SYNC_RUN_HISTORY_PATH = "sql/queries/find_sync_run_history.sql";
 
     private final String dbPath;
 
@@ -34,6 +36,7 @@ public class H2SyncStateStore implements SyncStateStore {
     private final String startSyncRunSql;
     private final String finishSyncRunSql;
     private final String findSyncJobsBySourceSql;
+    private final String findSyncRunHistorySql;
 
     public H2SyncStateStore(SqlResourceLoader sqlResourceLoader, H2DatabaseInitializer databaseInitializer){
         this.dbPath = databaseInitializer.initialize();
@@ -46,6 +49,7 @@ public class H2SyncStateStore implements SyncStateStore {
         this.startSyncRunSql = sqlResourceLoader.read(START_SYNC_RUN_PATH);
         this.finishSyncRunSql = sqlResourceLoader.read(FINISH_SYNC_RUN_PATH);
         this.findSyncJobsBySourceSql = sqlResourceLoader.read(FIND_SYNC_JOBS_BY_SOURCE_PATH);
+        this.findSyncRunHistorySql = sqlResourceLoader.read(FIND_SYNC_RUN_HISTORY_PATH);
     }
 
     private Connection getConnection() throws SQLException {
@@ -256,6 +260,44 @@ public class H2SyncStateStore implements SyncStateStore {
         }catch (SQLException e){
             throw new SyncStateStorageException(
                     "Erro ao consultar os destinos vinculados à playlist.", e);
+        }
+    }
+
+    @Override
+    public List<SyncRunHistory> findSyncRunHistory(int limit, int offset){
+        if (limit <= 0 || offset < 0){
+            throw new IllegalArgumentException(
+                    "Informe um limite positivo e um deslocamento maior ou igual a zero.");
+        }
+
+        List<SyncRunHistory> history = new ArrayList<>();
+
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(findSyncRunHistorySql)) {
+
+            statement.setInt(1, limit);
+            statement.setInt(2, offset);
+
+            try (ResultSet result = statement.executeQuery()){
+                while (result.next()){
+
+                    history.add(new SyncRunHistory(
+                            result.getLong("execution_id"),
+                            result.getLong("sync_job_id"),
+                            result.getString("source_playlist_id"),
+                            result.getString("destination_playlist_id"),
+                            result.getString("direction"),
+                            result.getString("status"),
+                            result.getObject("started_at", java.time.LocalDateTime.class),
+                            result.getObject("completed_at", java.time.LocalDateTime.class)));
+                }
+            }
+
+            return List.copyOf(history);
+
+        }catch (SQLException exception){
+            throw new SyncStateStorageException(
+                    "Não foi possível consultar o histórico das execuções.", exception);
         }
     }
 }
