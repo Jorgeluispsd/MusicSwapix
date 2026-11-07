@@ -12,9 +12,9 @@
     </parent>
 
     <groupId>com.jorge</groupId>
-    <artifactId>conversor-de-playlists</artifactId>
+    <artifactId>music-swapix</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>Conversor-de-Playlists</name>
+    <name>MusicSwapix</name>
     <description>Conversor de playlists Spotify e YouTube Music (bidirecional)</description>
 
     <properties>
