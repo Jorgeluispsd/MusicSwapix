@@ -1,12 +1,13 @@
-import {Component, DestroyRef, inject, signal }  from '@angular/core';
+import {Component, computed,DestroyRef, inject, signal }  from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import { finalize } from 'rxjs';
+import { finalize, Observable } from 'rxjs';
 import { PlaylistPreviewApi } from '../../core/api/playlist-preview-api';
-import { NewPlaylistPreviewRequest } from '../../core/models/new-playlist-preview-request';
 import { PlaylistPreviewResponse } from '../../core/models/playlist-preview-response';
 import { PlaylistVisibility } from '../../core/models/playlist-visibility';
 import { PlaylistConversionResponse } from '../../core/models/playlist-conversion-response';
+
+type DestinationMode = 'new' | 'existing';
 
 @Component({
   selector: 'app-conversion-page',
@@ -23,6 +24,18 @@ export class ConversionPage {
   readonly errorMessage = signal('');
   readonly confirming = signal(false);
   readonly conversionResult = signal<PlaylistConversionResponse | null>(null);
+  readonly destinationMode = signal<DestinationMode>('new');
+
+  readonly canConfirm = computed(() => {
+    const stored = this.preview();
+
+    if (!stored || this.loading()) {
+      return false;
+    }
+
+    return stored.destinationPlaylistId !== null
+      || stored.newTrackCount > 0;
+  });
 
   readonly form = new FormGroup({
     sourcePlaylist: new FormControl('', {
@@ -33,10 +46,36 @@ export class ConversionPage {
       nonNullable: true,
       validators: [Validators.required, Validators.pattern(/\S/)],
     }),
+    destinationPlaylist: new FormControl('', {
+      nonNullable: true,
+    }),
     visibility: new FormControl<PlaylistVisibility>('PRIVATE', {
       nonNullable: true,
     }),
   });
+
+  selectDestinationMode(mode: DestinationMode): void {
+    if (this.loading() || this.preview() || this.conversionResult()) {
+      return;
+    }
+
+    this.destinationMode.set(mode);
+
+    const nameControl = this.form.controls.destinationName;
+    const playlistControl = this.form.controls.destinationPlaylist;
+    const requiredText = [
+      Validators.required,
+      Validators.pattern(/\S/),
+    ];
+
+    nameControl.setValidators(mode === 'new' ? requiredText : []);
+    playlistControl.setValidators(mode === 'existing' ? requiredText : []);
+
+    nameControl.updateValueAndValidity();
+    playlistControl.updateValueAndValidity();
+
+    this.errorMessage.set('');
+  }
 
   preparePreview(): void {
     if (this.loading() || this.preview() || this.conversionResult()) {
@@ -49,19 +88,13 @@ export class ConversionPage {
       return;
     }
 
-    const values = this.form.getRawValue();
-
-    const request: NewPlaylistPreviewRequest = {
-      sourcePlaylist: values.sourcePlaylist.trim(),
-      destinationName: values.destinationName.trim(),
-      visibility: values.visibility,
-    };
+    const request = this.requestPreview();
 
     this.errorMessage.set('');
     this.loading.set(true);
     this.form.disable();
 
-    this.previewApi.prepareNewPlaylist(request)
+    request
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
@@ -109,7 +142,7 @@ export class ConversionPage {
   confirmPreview(): void {
     const stored = this.preview();
 
-    if (!stored || this.loading() || stored.newTrackCount === 0) {
+    if (!stored || !this.canConfirm()) {
       return;
     }
 
@@ -151,5 +184,23 @@ export class ConversionPage {
     this.errorMessage.set('');
     this.form.reset();
     this.form.enable();
+  }
+
+  private requestPreview(): Observable<PlaylistPreviewResponse> {
+    const values = this.form.getRawValue();
+    const sourcePlaylist = values.sourcePlaylist.trim();
+
+    if (this.destinationMode() === 'existing') {
+      return this.previewApi.prepareExistingPlaylist({
+        sourcePlaylist,
+        destinationPlaylist: values.destinationPlaylist.trim(),
+      });
+    }
+
+    return this.previewApi.prepareNewPlaylist({
+      sourcePlaylist,
+      destinationName: values.destinationName.trim(),
+      visibility: values.visibility,
+    });
   }
 }

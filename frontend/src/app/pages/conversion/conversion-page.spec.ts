@@ -43,6 +43,7 @@ describe('ConversionPage', () => {
     component.form.setValue({
       sourcePlaylist: 'https://open.spotify.com/playlist/1234567890123456789012',
       destinationName: 'Meu Rock',
+      destinationPlaylist: '',
       visibility: 'UNLISTED',
     });
 
@@ -50,6 +51,7 @@ describe('ConversionPage', () => {
     expect(component.form.getRawValue()).toEqual({
       sourcePlaylist: 'https://open.spotify.com/playlist/1234567890123456789012',
       destinationName: 'Meu Rock',
+      destinationPlaylist: '',
       visibility: 'UNLISTED',
     });
   });
@@ -91,6 +93,7 @@ describe('ConversionPage', () => {
     component.form.setValue({
       sourcePlaylist: ' 1234567890123456789012 ',
       destinationName: ' Meu Rock ',
+      destinationPlaylist: '',
       visibility: 'PRIVATE',
     });
 
@@ -179,6 +182,7 @@ describe('ConversionPage', () => {
     component.form.setValue({
       sourcePlaylist: '1234567890123456789012',
       destinationName: 'Meu Rock',
+      destinationPlaylist: '',
       visibility: 'PRIVATE',
     });
 
@@ -223,11 +227,12 @@ describe('ConversionPage', () => {
 
     fixture.detectChanges();
 
-    expect(compiled.querySelector('.cancel-button')).toBeNull();
+    expect(compiled.querySelector('.preview-result .cancel-button'),).toBeNull();
 
     component.form.setValue({
       sourcePlaylist: '1234567890123456789012',
       destinationName: 'Meu Rock',
+      destinationPlaylist: '',
       visibility: 'PRIVATE',
     });
 
@@ -270,7 +275,7 @@ describe('ConversionPage', () => {
 
     fixture.detectChanges();
 
-    expect(compiled.querySelector('.cancel-button')).toBeNull();
+    expect(compiled.querySelector('.preview-result .cancel-button'),).toBeNull();
     expect(compiled.querySelector('.preview-result')).toBeNull();
   });
 
@@ -356,5 +361,125 @@ describe('ConversionPage', () => {
     httpTesting.expectNone(
       (pending) => pending.method === 'POST',
     );
+  });
+
+  it('shouldRequireDestinationInsteadOfNameForExistingPlaylist', () => {
+    const component = TestBed.createComponent(ConversionPage).componentInstance;
+
+    component.selectDestinationMode('existing');
+
+    component.form.patchValue({
+      sourcePlaylist: 'source-playlist',
+      destinationName: '',
+      destinationPlaylist: '   ',
+    });
+
+    expect(component.form.controls.destinationName.valid).toBe(true);
+    expect(component.form.controls.destinationPlaylist.invalid).toBe(true);
+    expect(component.form.invalid).toBe(true);
+
+    component.form.controls.destinationPlaylist.setValue('PL-destination');
+
+    expect(component.form.valid).toBe(true);
+
+    component.selectDestinationMode('new');
+
+    expect(component.form.controls.destinationName.invalid).toBe(true);
+    expect(component.form.invalid).toBe(true);
+  });
+
+  it('shouldSendExistingDestinationWithoutNameOrVisibility', () => {
+    const component = TestBed.createComponent(ConversionPage).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.selectDestinationMode('existing');
+
+    component.form.patchValue({
+      sourcePlaylist: ' source-playlist ',
+      destinationPlaylist: ' PL-destination ',
+    });
+
+    component.preparePreview();
+
+    const request = httpTesting.expectOne(
+      '/api/conversions/previews/existing',
+    );
+
+    expect(request.request.body).toEqual({
+      sourcePlaylist: 'source-playlist',
+      destinationPlaylist: 'PL-destination',
+    });
+
+    httpTesting.expectNone('/api/conversions/previews/new');
+
+    request.flush({}, {
+      status: 503,
+      statusText: 'Service Unavailable',
+    });
+
+    expect(component.form.enabled).toBe(true);
+    expect(component.loading()).toBe(false);
+  });
+
+  it('shouldShowFieldsForTheSelectedDestinationMode', () => {
+    const fixture = TestBed.createComponent(ConversionPage);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('#destination-name')).not.toBeNull();
+    expect(compiled.querySelector('#visibility')).not.toBeNull();
+    expect(compiled.querySelector('#destination-playlist')).toBeNull();
+
+    compiled
+      .querySelector<HTMLButtonElement>('#existing-destination-mode')!
+      .click();
+
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('#destination-name')).toBeNull();
+    expect(compiled.querySelector('#visibility')).toBeNull();
+    expect(compiled.querySelector('#destination-playlist')).not.toBeNull();
+  });
+
+  it('shouldConfirmExistingPlaylistWhenNoNewTracksAreNeeded', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.preview.set({
+      ...component.preview()!,
+      destinationPlaylistId: 'PL-existing',
+      destinationName: null,
+      visibility: null,
+      alreadyPresent: 1,
+      newTrackCount: 0,
+      matches: component.preview()!.matches.map((match) => ({
+        ...match,
+        alreadyPresent: true,
+      })),
+    });
+
+    const previewId = component.preview()!.previewId;
+
+    component.confirmPreview();
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    );
+
+    request.flush({
+      sourcePlaylistId: '1234567890123456789012',
+      destinationPlaylistId: 'PL-existing',
+      destinationPlaylistUrl:
+        'https://www.youtube.com/playlist?list=PL-existing',
+      insertedCount: 0,
+      skippedCount: 1,
+      notFoundCount: 0,
+      notFound: [],
+    });
+
+    expect(component.preview()).toBeNull();
+    expect(component.conversionResult()?.insertedCount).toBe(0);
+    expect(component.conversionResult()?.skippedCount).toBe(1);
   });
 });

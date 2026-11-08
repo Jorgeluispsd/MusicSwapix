@@ -4,6 +4,7 @@ import {Observable} from 'rxjs';
 import { NewPlaylistPreviewRequest } from '../models/new-playlist-preview-request';
 import { PlaylistPreviewResponse } from '../models/playlist-preview-response';
 import { PlaylistConversionResponse } from '../models/playlist-conversion-response';
+import { ExistingPlaylistPreviewRequest } from '../models/existing-playlist-preview-request';
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +17,15 @@ export class PlaylistPreviewApi {
   ): Observable<PlaylistPreviewResponse> {
     return this.http.post<PlaylistPreviewResponse>(
       '/api/conversions/previews/new',
+      request,
+    );
+  }
+
+  prepareExistingPlaylist(
+    request: ExistingPlaylistPreviewRequest,
+  ): Observable<PlaylistPreviewResponse> {
+    return this.http.post<PlaylistPreviewResponse>(
+      '/api/conversions/previews/existing',
       request,
     );
   }

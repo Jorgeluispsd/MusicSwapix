@@ -9,6 +9,7 @@ import { NewPlaylistPreviewRequest } from '../models/new-playlist-preview-reques
 import { PlaylistPreviewResponse } from '../models/playlist-preview-response';
 import { PlaylistPreviewApi } from './playlist-preview-api';
 import { PlaylistConversionResponse } from '../models/playlist-conversion-response';
+import { ExistingPlaylistPreviewRequest } from '../models/existing-playlist-preview-request';
 
 describe('PlaylistPreviewApi', () => {
   let api: PlaylistPreviewApi;
@@ -178,5 +179,54 @@ describe('PlaylistPreviewApi', () => {
     });
 
     await rejection;
+  });
+
+  it('shouldPostExistingPlaylistRequestAndReturnPreview', async () => {
+    const payload: ExistingPlaylistPreviewRequest = {
+      sourcePlaylist: '1234567890123456789012',
+      destinationPlaylist: 'PL-existing-destination',
+    };
+
+    const expected: PlaylistPreviewResponse = {
+      previewId: '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206',
+      sourcePlaylistId: payload.sourcePlaylist,
+      destinationPlaylistId: payload.destinationPlaylist,
+      destinationName: null,
+      visibility: null,
+      expiresAt: '2026-11-08T18:10:00Z',
+      total: 1,
+      found: 1,
+      alreadyPresent: 1,
+      newTrackCount: 0,
+      repeatedCandidateCount: 0,
+      notFoundCount: 0,
+      matches: [
+        {
+          sourceTrackId: 'source-track',
+          sourceTitle: 'Minha música',
+          sourceArtist: 'Meu artista',
+          destinationTrackId: 'destination-track',
+          destinationTitle: 'Minha música — Official Audio',
+          confidence: 0.95,
+          alreadyPresent: true,
+        },
+      ],
+      notFound: [],
+    };
+
+    const responsePromise = firstValueFrom(
+      api.prepareExistingPlaylist(payload),
+    );
+
+    const request = httpTesting.expectOne(
+      '/api/conversions/previews/existing',
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(payload);
+
+    request.flush(expected);
+
+    expect(await responsePromise).toEqual(expected);
   });
 });

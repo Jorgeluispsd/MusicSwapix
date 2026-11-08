@@ -131,3 +131,15 @@ small {
   display: inline-block;
   text-decoration: none;
 }
+
+.destination-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.destination-options button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: rgb(255 53 71 / 12%);
+}

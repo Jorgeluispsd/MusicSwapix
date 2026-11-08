@@ -15,7 +15,7 @@
     <h2 id="conversion-title">Qual playlist vamos levar?</h2>
 
     <p class="page-description">
-      Informe a origem e escolha como sua nova playlist será criada no YouTube.
+      Informe a origem e escolha onde suas músicas serão adicionadas no YouTube.
     </p>
   }
 
@@ -26,6 +26,30 @@
     [attr.aria-busy]="loading()"
     (ngSubmit)="preparePreview()"
   >
+    <div class="destination-options" role="group" aria-label="Tipo de destino">
+      <button
+        id="new-destination-mode"
+        class="cancel-button"
+        type="button"
+        [attr.aria-pressed]="destinationMode() === 'new'"
+        [disabled]="loading()"
+        (click)="selectDestinationMode('new')"
+      >
+        Nova playlist
+      </button>
+
+      <button
+        id="existing-destination-mode"
+        class="cancel-button"
+        type="button"
+        [attr.aria-pressed]="destinationMode() === 'existing'"
+        [disabled]="loading()"
+        (click)="selectDestinationMode('existing')"
+      >
+        Playlist existente
+      </button>
+    </div>
+
     <div class="form-field">
       <label for="source-playlist">Link ou ID da playlist no Spotify</label>
 
@@ -52,37 +76,74 @@
       }
     </div>
 
-    <div class="form-field">
-      <label for="destination-name">Nome da nova playlist</label>
+    @if (destinationMode() === 'new') {
+      <div class="form-field">
+        <label for="destination-name">Nome da nova playlist</label>
 
-      <input
-        id="destination-name"
-        type="text"
-        formControlName="destinationName"
-        placeholder="Minha playlist convertida"
-        aria-describedby="destination-error"
-        [attr.aria-invalid]="
+        <input
+          id="destination-name"
+          type="text"
+          formControlName="destinationName"
+          placeholder="Minha playlist convertida"
+          aria-describedby="destination-error"
+          [attr.aria-invalid]="
+        form.controls.destinationName.invalid &&
+        form.controls.destinationName.touched
+      "
+        />
+
+        @if (
           form.controls.destinationName.invalid &&
           form.controls.destinationName.touched
-        "
-      />
+          ) {
+          <p id="destination-error" class="field-error">
+            Informe o nome da playlist de destino.
+          </p>
+        }
+      </div>
 
-      @if (form.controls.destinationName.invalid && form.controls.destinationName.touched) {
-        <p id="destination-error" class="field-error">
-          Informe o nome da playlist de destino.
-        </p>
-      }
-    </div>
+      <div class="form-field">
+        <label for="visibility">Visibilidade</label>
 
-    <div class="form-field">
-      <label for="visibility">Visibilidade</label>
+        <select id="visibility" formControlName="visibility">
+          <option value="PRIVATE">Privada</option>
+          <option value="PUBLIC">Pública</option>
+          <option value="UNLISTED">Não listada</option>
+        </select>
+      </div>
+    } @else {
+      <div class="form-field">
+        <label for="destination-playlist">
+          Link ou ID da playlist no YouTube
+        </label>
 
-      <select id="visibility" formControlName="visibility">
-        <option value="PRIVATE">Privada</option>
-        <option value="PUBLIC">Pública</option>
-        <option value="UNLISTED">Não listada</option>
-      </select>
-    </div>
+        <input
+          id="destination-playlist"
+          type="text"
+          formControlName="destinationPlaylist"
+          placeholder="https://www.youtube.com/playlist?list=…"
+          [attr.aria-invalid]="
+        form.controls.destinationPlaylist.invalid &&
+        form.controls.destinationPlaylist.touched
+      "
+          [attr.aria-describedby]="
+        form.controls.destinationPlaylist.invalid &&
+        form.controls.destinationPlaylist.touched
+          ? 'existing-destination-error'
+          : null
+      "
+        />
+
+        @if (
+          form.controls.destinationPlaylist.invalid &&
+          form.controls.destinationPlaylist.touched
+          ) {
+          <p id="existing-destination-error" class="field-error">
+            Informe o link ou o ID da playlist de destino.
+          </p>
+        }
+      </div>
+    }
 
     <button
       class="preview-button"
@@ -107,7 +168,12 @@
     <section class="preview-result" aria-labelledby="preview-title">
       <h2 id="preview-title">Confira antes de converter</h2>
 
-      <p class="page-description">{{ result.destinationName }}</p>
+      <p class="page-description">@if (result.destinationPlaylistId) {
+        Destino: playlist existente no YouTube.
+      } @else {
+        Nova playlist: {{ result.destinationName }}
+      }
+      </p>
 
       <dl class="preview-summary">
         <div>
@@ -117,6 +183,10 @@
         <div>
           <dt>Encontradas</dt>
           <dd>{{ result.found }}</dd>
+        </div>
+        <div>
+          <dt>Já presentes no destino</dt>
+          <dd>{{ result.alreadyPresent }}</dd>
         </div>
         <div>
           <dt>Para adicionar</dt>
@@ -136,6 +206,9 @@
             <strong>{{ match.sourceTitle }}</strong>
             <span>{{ match.sourceArtist }}</span>
             <p>→ {{ match.destinationTitle }}</p>
+            @if (match.alreadyPresent) {
+              <small>Já presente no destino — não será adicionada novamente.</small>
+            }
           </li>
         } @empty {
           <li>Nenhuma correspondência encontrada.</li>
@@ -159,7 +232,7 @@
         <button
           class="preview-button"
           type="button"
-          [disabled]="loading() || result.newTrackCount === 0"
+          [disabled]="!canConfirm()"
           (click)="confirmPreview()"
         >
           {{ confirming() ? 'Convertendo…' : 'Confirmar conversão' }}
@@ -179,7 +252,7 @@
 
   @if (conversionResult(); as result) {
     <section class="preview-result" aria-labelledby="result-title">
-      <h2 id="result-title">Playlist criada no YouTube</h2>
+      <h2 id="result-title">Conversão concluída</h2>
 
       <dl class="preview-summary">
         <div>
