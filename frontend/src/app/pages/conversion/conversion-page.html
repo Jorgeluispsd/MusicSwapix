@@ -1,7 +1,7 @@
 <section aria-labelledby="conversion-title">
   <ol class="conversion-steps" aria-label="Etapas da conversão">
-    <li aria-current="step">01 · Preparar</li>
-    <li>02 · Revisar</li>
+    <li [attr.aria-current]="preview() ? null : 'step'">01 · Preparar</li>
+    <li [attr.aria-current]="preview() ? 'step' : null">02 · Revisar</li>
     <li>03 · Resultado</li>
   </ol>
 
@@ -11,7 +11,11 @@
     Informe a origem e escolha como sua nova playlist será criada no YouTube.
   </p>
 
-  <form class="conversion-form" [formGroup]="form">
+  <form class="conversion-form"
+        [formGroup]="form"
+        [hidden]="preview() !== null"
+        [attr.aria-busy]="loading()"
+        (ngSubmit)="preparePreview()">
     <div class="form-field">
       <label for="source-playlist">Link ou ID da playlist no Spotify</label>
 
@@ -68,8 +72,74 @@
       </select>
     </div>
 
-    <button class="preview-button" type="button" disabled>
-      Gerar prévia →
+    <button class="preview-button"
+            type="submit"
+            [disabled]="loading()">
+      {{ loading() ? 'Buscando correspondências…' : 'Gerar prévia →' }}
     </button>
   </form>
+
+  @if (loading()) {
+    <p class="page-description" role="status">
+      Estamos preparando sua prévia. Autorize o acesso no navegador, se solicitado.
+    </p>
+  }
+
+  @if (errorMessage()) {
+    <p class="field-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (preview(); as result) {
+    <section class="preview-result" aria-labelledby="preview-title">
+      <h2 id="preview-title">Confira antes de converter</h2>
+
+      <p class="page-description">{{ result.destinationName }}</p>
+
+      <dl class="preview-summary">
+        <div>
+          <dt>Na origem</dt>
+          <dd>{{ result.total }}</dd>
+        </div>
+        <div>
+          <dt>Encontradas</dt>
+          <dd>{{ result.found }}</dd>
+        </div>
+        <div>
+          <dt>Para adicionar</dt>
+          <dd>{{ result.newTrackCount }}</dd>
+        </div>
+        <div>
+          <dt>Sem correspondência</dt>
+          <dd>{{ result.notFoundCount }}</dd>
+        </div>
+      </dl>
+
+      <h3>Correspondências selecionadas</h3>
+
+      <ul class="track-list">
+        @for (match of result.matches; track $index) {
+          <li>
+            <strong>{{ match.sourceTitle }}</strong>
+            <span>{{ match.sourceArtist }}</span>
+            <p>→ {{ match.destinationTitle }}</p>
+          </li>
+        } @empty {
+          <li>Nenhuma correspondência encontrada.</li>
+        }
+      </ul>
+
+      @if (result.notFound.length > 0) {
+        <h3>Sem correspondência</h3>
+
+        <ul class="track-list">
+          @for (track of result.notFound; track $index) {
+            <li>
+              <strong>{{ track.title }}</strong>
+              <span>{{ track.artist }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
 </section>

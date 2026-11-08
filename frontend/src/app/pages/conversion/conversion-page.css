@@ -59,3 +59,48 @@ small {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.preview-result {
+  margin-top: 28px;
+}
+
+.preview-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 28px 0;
+}
+
+.preview-summary dt {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.preview-summary dd {
+  margin: 8px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.track-list {
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.track-list li {
+  padding: 16px 0;
+  border-bottom: 1px solid #454545;
+}
+
+.track-list span {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.track-list p {
+  margin-bottom: 0;
+  line-height: 1.6;
+}
