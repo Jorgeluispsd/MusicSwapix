@@ -1,0 +1,75 @@
+<section aria-labelledby="conversion-title">
+  <ol class="conversion-steps" aria-label="Etapas da conversão">
+    <li aria-current="step">01 · Preparar</li>
+    <li>02 · Revisar</li>
+    <li>03 · Resultado</li>
+  </ol>
+
+  <h2 id="conversion-title">Qual playlist vamos levar?</h2>
+
+  <p class="page-description">
+    Informe a origem e escolha como sua nova playlist será criada no YouTube.
+  </p>
+
+  <form class="conversion-form" [formGroup]="form">
+    <div class="form-field">
+      <label for="source-playlist">Link ou ID da playlist no Spotify</label>
+
+      <input
+        id="source-playlist"
+        type="text"
+        formControlName="sourcePlaylist"
+        placeholder="https://open.spotify.com/playlist/…"
+        aria-describedby="source-help source-error"
+        [attr.aria-invalid]="
+          form.controls.sourcePlaylist.invalid &&
+          form.controls.sourcePlaylist.touched
+        "
+      />
+
+      <small id="source-help">Cole o endereço ou o ID da playlist de origem.</small>
+
+      @if (form.controls.sourcePlaylist.invalid && form.controls.sourcePlaylist.touched) {
+        <p id="source-error" class="field-error">
+          Informe o link ou o ID da playlist de origem.
+        </p>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="destination-name">Nome da nova playlist</label>
+
+      <input
+        id="destination-name"
+        type="text"
+        formControlName="destinationName"
+        placeholder="Minha playlist convertida"
+        aria-describedby="destination-error"
+        [attr.aria-invalid]="
+          form.controls.destinationName.invalid &&
+          form.controls.destinationName.touched
+        "
+      />
+
+      @if (form.controls.destinationName.invalid && form.controls.destinationName.touched) {
+        <p id="destination-error" class="field-error">
+          Informe o nome da playlist de destino.
+        </p>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="visibility">Visibilidade</label>
+
+      <select id="visibility" formControlName="visibility">
+        <option value="PRIVATE">Privada</option>
+        <option value="PUBLIC">Pública</option>
+        <option value="UNLISTED">Não listada</option>
+      </select>
+    </div>
+
+    <button class="preview-button" type="button" disabled>
+      Gerar prévia →
+    </button>
+  </form>
+</section>
