@@ -9,6 +9,8 @@ import com.jorge.playlistconverter.errors.youtube.*;
 import com.jorge.playlistconverter.model.Song;
 import com.jorge.playlistconverter.service.MusicService;
 import com.jorge.playlistconverter.youtube.authorization.YoutubeAuthenticatedClientFactory;
+import lombok.extern.slf4j.Slf4j;
+
 import static org.apache.commons.text.StringEscapeUtils.unescapeHtml4;
 
 import java.io.IOException;
@@ -17,11 +19,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-/**
- * Leitura de playlists e busca de candidatos no YouTube usando chave de API.
- * Quota esgotada é identificada por quotaExceeded, sem repetição imediata.
- * Fase 6: adicionar OAuth do usuário para criar playlists e inserir vídeos no destino.
- */
+@Slf4j
 public class YoutubeMusicService implements MusicService {
 
     private final YouTube youtube;
@@ -132,6 +130,8 @@ public class YoutubeMusicService implements MusicService {
                     .toList();
 
         }catch (GoogleJsonResponseException e){
+            log.debug("Busca do YouTube recusada. HTTP: {}", e.getStatusCode());
+
             if (isQuotaExceeded(e)){
                 throw new YoutubeQuotaExceededException("A quota da API do YouTube foi esgotada. "
                         + "A busca de candidatos não foi concluída. "
@@ -143,6 +143,7 @@ public class YoutubeMusicService implements MusicService {
                             + "Código HTTP: " + e.getStatusCode() + ".", e);
 
         } catch (IOException e) {
+            log.debug("Falha de comunicação na busca do YouTube. Tipo: {}", e.getClass().getSimpleName());
             throw new YoutubeSearchException("Falha de comunicação ao buscar candidatos no YouTube.", e);
         }
         // Os candidatos retornados são comparados pelo TrackMatcher fora deste serviço.

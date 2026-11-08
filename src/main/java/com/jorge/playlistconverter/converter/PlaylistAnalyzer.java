@@ -62,9 +62,9 @@ public class PlaylistAnalyzer {
     }
 
     private MatchResult searchMatch(Song song){
-        List<Song> candidates = destination.searchCandidates(song);
-
         log.debug("Origem da análise: {}", song);
+
+        List<Song> candidates = destination.searchCandidates(song);
 
         for (int index = 0; index < candidates.size(); index++){
             log.debug("Candidato {}: {}", index + 1,
