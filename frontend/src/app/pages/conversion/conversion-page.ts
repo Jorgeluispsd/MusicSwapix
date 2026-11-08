@@ -6,6 +6,7 @@ import { PlaylistPreviewApi } from '../../core/api/playlist-preview-api';
 import { NewPlaylistPreviewRequest } from '../../core/models/new-playlist-preview-request';
 import { PlaylistPreviewResponse } from '../../core/models/playlist-preview-response';
 import { PlaylistVisibility } from '../../core/models/playlist-visibility';
+import { PlaylistConversionResponse } from '../../core/models/playlist-conversion-response';
 
 @Component({
   selector: 'app-conversion-page',
@@ -20,6 +21,8 @@ export class ConversionPage {
   readonly loading = signal(false);
   readonly preview = signal<PlaylistPreviewResponse | null>(null);
   readonly errorMessage = signal('');
+  readonly confirming = signal(false);
+  readonly conversionResult = signal<PlaylistConversionResponse | null>(null);
 
   readonly form = new FormGroup({
     sourcePlaylist: new FormControl('', {
@@ -36,7 +39,7 @@ export class ConversionPage {
   });
 
   preparePreview(): void {
-    if (this.loading() || this.preview()) {
+    if (this.loading() || this.preview() || this.conversionResult()) {
       return;
     }
 
@@ -101,5 +104,52 @@ export class ConversionPage {
           'Não foi possível cancelar a prévia. Tente novamente em instantes.',
         ),
       });
+  }
+
+  confirmPreview(): void {
+    const stored = this.preview();
+
+    if (!stored || this.loading() || stored.newTrackCount === 0) {
+      return;
+    }
+
+    this.errorMessage.set('');
+    this.loading.set(true);
+    this.confirming.set(true);
+
+    this.previewApi.confirmPreview(stored.previewId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.loading.set(false);
+          this.confirming.set(false);
+        }),
+      )
+      .subscribe({
+        next: (response) => {
+          this.conversionResult.set(response);
+          this.preview.set(null);
+        },
+        error: () => {
+          this.preview.set(null);
+          this.form.enable();
+          this.errorMessage.set(
+            'Não foi possível confirmar o resultado da conversão. '
+            + 'Confira a playlist no YouTube antes de gerar uma nova prévia, '
+            + 'pois alterações podem já ter sido feitas.',
+          );
+        },
+      });
+  }
+
+  startNewConversion(): void {
+    if (this.loading()) {
+      return;
+    }
+
+    this.conversionResult.set(null);
+    this.errorMessage.set('');
+    this.form.reset();
+    this.form.enable();
   }
 }

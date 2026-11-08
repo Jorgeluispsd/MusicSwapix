@@ -193,13 +193,23 @@ describe('ConversionPage', () => {
         destinationName: 'Meu Rock',
         visibility: 'PRIVATE',
         expiresAt: '2099-01-01T12:00:00Z',
-        total: 0,
-        found: 0,
+        total: 1,
+        found: 1,
         alreadyPresent: 0,
-        newTrackCount: 0,
+        newTrackCount: 1,
         repeatedCandidateCount: 0,
         notFoundCount: 0,
-        matches: [],
+        matches: [
+          {
+            sourceTrackId: 'source-track',
+            sourceTitle: 'Song A',
+            sourceArtist: 'Artist A',
+            destinationTrackId: 'video-A',
+            destinationTitle: 'Video A',
+            confidence: 0.95,
+            alreadyPresent: false,
+          },
+        ],
         notFound: [],
       });
 
@@ -262,5 +272,89 @@ describe('ConversionPage', () => {
 
     expect(compiled.querySelector('.cancel-button')).toBeNull();
     expect(compiled.querySelector('.preview-result')).toBeNull();
+  });
+
+  it('should confirm once and prevent cancellation while confirming', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const previewId = component.preview()!.previewId;
+
+    component.confirmPreview();
+    component.confirmPreview();
+    component.cancelPreview();
+
+    expect(component.loading()).toBe(true);
+    expect(component.confirming()).toBe(true);
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    );
+
+    httpTesting.expectNone(
+      (pending) => pending.method === 'DELETE',
+    );
+
+    request.flush({
+      sourcePlaylistId: '1234567890123456789012',
+      destinationPlaylistId: 'new-destination',
+      destinationPlaylistUrl: 'https://www.youtube.com/playlist?list=new-destination',
+      insertedCount: 1,
+      skippedCount: 0,
+      notFoundCount: 0,
+      notFound: [],
+    });
+
+    expect(component.preview()).toBeNull();
+    expect(component.conversionResult()?.insertedCount).toBe(1);
+    expect(component.loading()).toBe(false);
+    expect(component.confirming()).toBe(false);
+
+    component.startNewConversion();
+
+    expect(component.conversionResult()).toBeNull();
+    expect(component.form.enabled).toBe(true);
+    expect(component.form.controls.sourcePlaylist.value).toBe('');
+    expect(component.form.controls.visibility.value).toBe('PRIVATE');
+  });
+
+  it('should discard the consumed preview after confirmation failure', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const previewId = component.preview()!.previewId;
+
+    component.confirmPreview();
+
+    httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    ).flush({}, { status: 502, statusText: 'Bad Gateway' });
+
+    expect(component.preview()).toBeNull();
+    expect(component.conversionResult()).toBeNull();
+    expect(component.form.enabled).toBe(true);
+    expect(component.loading()).toBe(false);
+    expect(component.errorMessage()).toContain('Confira a playlist no YouTube');
+
+    component.confirmPreview();
+
+    httpTesting.expectNone(
+      (pending) => pending.method === 'POST',
+    );
+  });
+
+  it('should prevent confirmation when the preview has no tracks to add', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.preview.set({
+      ...component.preview()!,
+      newTrackCount: 0,
+    });
+
+    component.confirmPreview();
+
+    expect(component.loading()).toBe(false);
+    httpTesting.expectNone(
+      (pending) => pending.method === 'POST',
+    );
   });
 });

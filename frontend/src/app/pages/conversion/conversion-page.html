@@ -1,21 +1,31 @@
-<section aria-labelledby="conversion-title">
+<section aria-label="Conversão de playlist">
   <ol class="conversion-steps" aria-label="Etapas da conversão">
-    <li [attr.aria-current]="preview() ? null : 'step'">01 · Preparar</li>
-    <li [attr.aria-current]="preview() ? 'step' : null">02 · Revisar</li>
-    <li>03 · Resultado</li>
+    <li [attr.aria-current]="!preview() && !conversionResult() ? 'step' : null">
+      01 · Preparar
+    </li>
+    <li [attr.aria-current]="preview() ? 'step' : null">
+      02 · Revisar
+    </li>
+    <li [attr.aria-current]="conversionResult() ? 'step' : null">
+      03 · Resultado
+    </li>
   </ol>
 
-  <h2 id="conversion-title">Qual playlist vamos levar?</h2>
+  @if (!preview() && !conversionResult()) {
+    <h2 id="conversion-title">Qual playlist vamos levar?</h2>
 
-  <p class="page-description">
-    Informe a origem e escolha como sua nova playlist será criada no YouTube.
-  </p>
+    <p class="page-description">
+      Informe a origem e escolha como sua nova playlist será criada no YouTube.
+    </p>
+  }
 
-  <form class="conversion-form"
-        [formGroup]="form"
-        [hidden]="preview() !== null"
-        [attr.aria-busy]="loading()"
-        (ngSubmit)="preparePreview()">
+  <form
+    class="conversion-form"
+    [formGroup]="form"
+    [hidden]="preview() !== null || conversionResult() !== null"
+    [attr.aria-busy]="loading()"
+    (ngSubmit)="preparePreview()"
+  >
     <div class="form-field">
       <label for="source-playlist">Link ou ID da playlist no Spotify</label>
 
@@ -31,7 +41,9 @@
         "
       />
 
-      <small id="source-help">Cole o endereço ou o ID da playlist de origem.</small>
+      <small id="source-help">
+        Cole o endereço ou o ID da playlist de origem.
+      </small>
 
       @if (form.controls.sourcePlaylist.invalid && form.controls.sourcePlaylist.touched) {
         <p id="source-error" class="field-error">
@@ -72,14 +84,16 @@
       </select>
     </div>
 
-    <button class="preview-button"
-            type="submit"
-            [disabled]="loading()">
+    <button
+      class="preview-button"
+      type="submit"
+      [disabled]="loading()"
+    >
       {{ loading() ? 'Buscando correspondências…' : 'Gerar prévia →' }}
     </button>
   </form>
 
-  @if (loading() && !preview()) {
+  @if (loading() && !preview() && !conversionResult()) {
     <p class="page-description" role="status">
       Estamos preparando sua prévia. Autorize o acesso no navegador, se solicitado.
     </p>
@@ -143,12 +157,74 @@
 
       <div class="preview-actions">
         <button
+          class="preview-button"
+          type="button"
+          [disabled]="loading() || result.newTrackCount === 0"
+          (click)="confirmPreview()"
+        >
+          {{ confirming() ? 'Convertendo…' : 'Confirmar conversão' }}
+        </button>
+
+        <button
           class="cancel-button"
           type="button"
           [disabled]="loading()"
           (click)="cancelPreview()"
         >
-          {{ loading() ? 'Cancelando…' : 'Cancelar prévia' }}
+          {{ loading() && !confirming() ? 'Cancelando…' : 'Cancelar prévia' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (conversionResult(); as result) {
+    <section class="preview-result" aria-labelledby="result-title">
+      <h2 id="result-title">Playlist criada no YouTube</h2>
+
+      <dl class="preview-summary">
+        <div>
+          <dt>Adicionadas</dt>
+          <dd>{{ result.insertedCount }}</dd>
+        </div>
+        <div>
+          <dt>Puladas entre encontradas</dt>
+          <dd>{{ result.skippedCount }}</dd>
+        </div>
+        <div>
+          <dt>Sem correspondência</dt>
+          <dd>{{ result.notFoundCount }}</dd>
+        </div>
+      </dl>
+
+      @if (result.notFound.length > 0) {
+        <h3>Sem correspondência</h3>
+
+        <ul class="track-list">
+          @for (track of result.notFound; track $index) {
+            <li>
+              <strong>{{ track.title }}</strong>
+              <span>{{ track.artist }}</span>
+            </li>
+          }
+        </ul>
+      }
+
+      <div class="preview-actions">
+        <a
+          class="preview-button playlist-link"
+          [href]="result.destinationPlaylistUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Abrir playlist ↗
+        </a>
+
+        <button
+          class="cancel-button"
+          type="button"
+          (click)="startNewConversion()"
+        >
+          Nova conversão
         </button>
       </div>
     </section>
