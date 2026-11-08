@@ -79,7 +79,7 @@
     </button>
   </form>
 
-  @if (loading()) {
+  @if (loading() && !preview()) {
     <p class="page-description" role="status">
       Estamos preparando sua prévia. Autorize o acesso no navegador, se solicitado.
     </p>
@@ -140,6 +140,17 @@
           }
         </ul>
       }
+
+      <div class="preview-actions">
+        <button
+          class="cancel-button"
+          type="button"
+          [disabled]="loading()"
+          (click)="cancelPreview()"
+        >
+          {{ loading() ? 'Cancelando…' : 'Cancelar prévia' }}
+        </button>
+      </div>
     </section>
   }
 </section>

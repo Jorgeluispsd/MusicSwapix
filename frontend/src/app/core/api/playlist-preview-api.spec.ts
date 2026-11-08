@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { NewPlaylistPreviewRequest } from '../models/new-playlist-preview-request';
 import { PlaylistPreviewResponse } from '../models/playlist-preview-response';
 import { PlaylistPreviewApi } from './playlist-preview-api';
+import { PlaylistConversionResponse } from '../models/playlist-conversion-response';
 
 describe('PlaylistPreviewApi', () => {
   let api: PlaylistPreviewApi;
@@ -96,6 +97,84 @@ describe('PlaylistPreviewApi', () => {
     request.flush(backendError, {
       status: 400,
       statusText: 'Bad Request',
+    });
+
+    await rejection;
+  });
+
+  it('shouldConfirmPreviewByIdWithoutSendingRequestBody', async () => {
+    const previewId = '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206';
+
+    const expected: PlaylistConversionResponse = {
+      sourcePlaylistId: 'source-playlist',
+      destinationPlaylistId: 'destination-playlist',
+      destinationPlaylistUrl:
+        'https://www.youtube.com/playlist?list=destination-playlist',
+      insertedCount: 2,
+      skippedCount: 0,
+      notFoundCount: 0,
+      notFound: [],
+    };
+
+    const responsePromise = firstValueFrom(api.confirmPreview(previewId));
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+
+    request.flush(expected);
+
+    expect(await responsePromise).toEqual(expected);
+  });
+
+  it('shouldCancelPreviewByIdAndAcceptNoContent', async () => {
+    const previewId = '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206';
+
+    const responsePromise = firstValueFrom(api.cancelPreview(previewId));
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}`,
+    );
+
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.body).toBeNull();
+
+    request.flush(null, {
+      status: 204,
+      statusText: 'No Content',
+    });
+
+    await responsePromise;
+  });
+
+  it('shouldPreserveUnavailablePreviewErrorWithoutRetryingConfirmation', async () => {
+    const previewId = '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206';
+
+    const backendError = {
+      status: 404,
+      code: 'PREVIEW_UNAVAILABLE',
+      message: 'A prévia não está disponível para confirmação. Gere uma nova prévia.',
+      path: `/api/conversions/previews/${previewId}/confirm`,
+      fieldErrors: [],
+    };
+
+    const responsePromise = firstValueFrom(api.confirmPreview(previewId));
+
+    const rejection = expect(responsePromise).rejects.toMatchObject({
+      status: 404,
+      error: backendError,
+    });
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    );
+
+    request.flush(backendError, {
+      status: 404,
+      statusText: 'Not Found',
     });
 
     await rejection;

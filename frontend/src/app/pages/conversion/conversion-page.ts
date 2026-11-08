@@ -76,4 +76,30 @@ export class ConversionPage {
         ),
       });
   }
+
+  cancelPreview(): void {
+    const stored = this.preview();
+
+    if (!stored || this.loading()) {
+      return;
+    }
+
+    this.errorMessage.set('');
+    this.loading.set(true);
+
+    this.previewApi.cancelPreview(stored.previewId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.preview.set(null);
+          this.form.enable();
+        },
+        error: () => this.errorMessage.set(
+          'Não foi possível cancelar a prévia. Tente novamente em instantes.',
+        ),
+      });
+  }
 }
