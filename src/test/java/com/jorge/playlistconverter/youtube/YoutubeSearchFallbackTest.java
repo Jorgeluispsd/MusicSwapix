@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoContentDetails;
 import com.google.api.services.youtube.model.VideoListResponse;
+import com.google.api.services.youtube.model.Thumbnail;
+import com.google.api.services.youtube.model.ThumbnailDetails;
 
 import java.io.IOException;
 import java.util.List;
@@ -251,7 +253,10 @@ class YoutubeSearchFallbackTest {
                 .setId(new ResourceId().setVideoId("second-video"))
                 .setSnippet(new SearchResultSnippet()
                         .setTitle("Diamond Eyes")
-                        .setChannelTitle("Shinedown - Topic"));
+                        .setChannelTitle("Shinedown - Topic")
+                        .setThumbnails(new ThumbnailDetails().setMedium(
+                                new Thumbnail().setUrl(
+                                        "https://example.com/second-video.jpg"))));
 
         when(request.execute()).thenReturn(
                 new SearchListResponse().setItems(List.of(first, second)));
@@ -269,6 +274,8 @@ class YoutubeSearchFallbackTest {
                 result.stream().map(Song::id).toList());
         assertEquals(0, result.get(0).durationMs());
         assertEquals(336_000, result.get(1).durationMs());
+        assertEquals("https://example.com/second-video.jpg",
+                result.get(1).artworkUrl());
 
         verify(request, times(1)).execute();
         verify(videoDetailsRequest).setId(List.of("video-id", "second-video"));

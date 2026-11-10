@@ -66,7 +66,8 @@ public class YoutubeMusicService implements MusicService {
                             item.getSnippet().getResourceId().getVideoId(),
                             unescapeHtml4(item.getSnippet().getTitle()),
                             unescapeHtml4(item.getSnippet().getVideoOwnerChannelTitle()),
-                            0
+                            0,
+                            readArtworkUrl(item.getSnippet().getThumbnails())
                     ));
                 }
 
@@ -129,7 +130,8 @@ public class YoutubeMusicService implements MusicService {
                             item.getId().getVideoId(),
                             unescapeHtml4(item.getSnippet().getTitle()),
                             unescapeHtml4(item.getSnippet().getChannelTitle()),
-                            0
+                            0,
+                            readArtworkUrl(item.getSnippet().getThumbnails())
                     ))
                     .toList();
 
@@ -358,7 +360,7 @@ public class YoutubeMusicService implements MusicService {
         }
 
         return candidates.stream().map(song -> new Song(song.id(), song.title(), song.artist(),
-                durationsById.getOrDefault(song.id(), 0))).toList();
+                durationsById.getOrDefault(song.id(), 0),song.artworkUrl())).toList();
     }
 
     private int readDurationMs(Video video){
@@ -374,5 +376,18 @@ public class YoutubeMusicService implements MusicService {
         }catch (DateTimeParseException | ArithmeticException e){
             return 0;
         }
+    }
+
+    private String readArtworkUrl(ThumbnailDetails thumbnails){
+        if (thumbnails == null){
+            return null;
+        }
+
+        Thumbnail image = thumbnails.getMedium();
+        if (image == null){
+            image = thumbnails.getDefault();
+        }
+
+        return image == null ? null : image.getUrl();
     }
 }

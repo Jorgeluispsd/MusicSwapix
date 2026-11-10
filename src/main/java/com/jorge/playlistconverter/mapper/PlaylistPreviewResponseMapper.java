@@ -44,7 +44,7 @@ public class PlaylistPreviewResponseMapper {
 
         return new MatchedTrackResponse(match.sourceSong().id(), match.sourceSong().title(),
                 match.sourceSong().artist(), match.matchedId(), match.matchedTitle(), match.confidence(),
-                existingDestinationIds.contains(match.matchedId()), reviewOptions, trackPosition);
+                existingDestinationIds.contains(match.matchedId()), reviewOptions, trackPosition, match.artworkUrl());
     }
 
     private TrackReviewOptionResponse toReviewOptionResponse(TrackReviewOption option,
@@ -52,6 +52,6 @@ public class PlaylistPreviewResponseMapper {
         var song = option.song();
 
         return new TrackReviewOptionResponse(song.id(), song.title(), song.artist(),
-                song.durationMs(), option.confidence(), existingDestinationIds.contains(song.id()));
+                song.durationMs(), option.confidence(), existingDestinationIds.contains(song.id()), song.artworkUrl());
     }
 }

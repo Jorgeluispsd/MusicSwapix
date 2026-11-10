@@ -72,7 +72,8 @@ public class TrackMatcher {
 
         RankedTrackCandidate best = ranked.getFirst();
 
-        return new MatchResult(sourceSong, best.song().id(), best.song().title(), best.confidence(), reviewOptions);
+        return new MatchResult(sourceSong, best.song().id(), best.song().title(),
+                best.confidence(), reviewOptions, best.song().artworkUrl());
     }
 
     private List<TrackReviewOption> findReviewOptions(List<RankedTrackCandidate> ranked){
@@ -130,8 +131,9 @@ public class TrackMatcher {
             boolean channelMatchesArtist = !normalizedSourceArtist.isBlank()
                     && normalizedSourceArtist.equals(normalizedCandidateArtist);
 
-            Matcher artistCredit = Pattern.compile("^" + Pattern.quote(normalizedSourceArtist) + "\\s*[-–—:]\\s*")
-                    .matcher(normalizedCandidateTitle);
+            Matcher artistCredit = Pattern.compile("^" + Pattern.quote(normalizedSourceArtist)
+                                    + "(?:\\s+(?:x|&|feat\\.?|ft\\.?)\\s+.+?)?"
+                                    + "\\s*[-–—:]\\s*").matcher(normalizedCandidateTitle);
 
             if (!normalizedSourceArtist.isBlank() && artistCredit.find()){
                 normalizedCandidateArtist = normalizedSourceArtist;
@@ -323,7 +325,12 @@ public class TrackMatcher {
     }
 
     private String normalizeMatchTitle(String title){
-        return normalizeText(versionMatcher.removeVersionLabels(title))
-                .replaceAll("\\s*[-–—:]\\s*$", "").strip();
+        String withoutProductionCredit = title.replaceFirst(
+                "(?i)\\s*[-–—]\\s*prod(?:uced)?\\.?\\s+by\\s+.+$",
+                "");
+
+        return normalizeText(versionMatcher.removeVersionLabels(withoutProductionCredit))
+                .replaceAll("\\s*[-–—:]\\s*$", "")
+                .strip();
     }
 }

@@ -219,4 +219,57 @@ class TrackMatcherPlaylistSelectionTest {
                         .map(option -> option.song().id())
                         .toList());
     }
+
+    @Test
+    void shouldMatchTrackWithoutRequiringProducerCreditInTitle() {
+        Song source = new Song(
+                "source-chimbala",
+                "Se Me Nota (Agarrame) - Prod by B-One",
+                "Chimbala",
+                175_999);
+
+        Song officialVideo = new Song(
+                "yxlE4alDecE",
+                "Chimbala x Omega - Se Me Nota - (Agarrame) - (Video Oficial)",
+                "ChimbalaHD",
+                178_000);
+
+        Song otherUpload = new Song(
+                "gfjEDD3N3mc",
+                "Omega, Chimbala & B One El Productor De Oro - Se Me Nota Agarrame"
+                        + " #NewMusic2026 #TrendingMusic",
+                "Beat Splash",
+                177_000);
+
+        MatchResult result = matcher.findBestMatch(
+                source, List.of(otherUpload, officialVideo));
+
+        assertEquals("yxlE4alDecE", result.matchedId());
+    }
+
+    @Test
+    void shouldRecognizeArtistCreditWithCollaborator() {
+        Song source = new Song(
+                "source-chimbala",
+                "Se Me Nota (Agarrame) - Prod by B-One",
+                "Chimbala",
+                175_999);
+
+        Song topicAudio = new Song(
+                "-uj9b1qcf0Y",
+                "Se Me Nota (Agarrame)",
+                "Omega - Topic",
+                177_000);
+
+        Song creditedVideo = new Song(
+                "yxlE4alDecE",
+                "Chimbala x Omega - Se Me Nota - (Agarrame) - (Video Oficial)",
+                "ChimbalaHD",
+                178_000);
+
+        MatchResult result = matcher.findBestMatch(
+                source, List.of(topicAudio, creditedVideo));
+
+        assertEquals("yxlE4alDecE", result.matchedId());
+    }
 }

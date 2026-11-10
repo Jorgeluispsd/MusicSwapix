@@ -61,7 +61,7 @@ class PlaylistPreviewResponseMapperTest {
                 0,
                 List.of(new MatchedTrackResponse("source-A", "Song source-A",
                         "Artist", "video-A", "Video video-A",
-                        0.95, false, List.of(), 0
+                        0.95, false, List.of(), 0, null
                 )), List.of());
 
         assertEquals(expected, response);
@@ -107,17 +107,17 @@ class PlaylistPreviewResponseMapperTest {
                         new MatchedTrackResponse(
                                 "source-A", "Song source-A", "Artist",
                                 "video-A", "Video video-A", 0.95, true,
-                                List.of(), 0
+                                List.of(), 0, null
                         ),
                         new MatchedTrackResponse(
                                 "source-B", "Song source-B", "Artist",
                                 "video-B", "Video video-B", 0.95, false,
-                                List.of(), 1
+                                List.of(), 1, null
                         ),
                         new MatchedTrackResponse(
                                 "source-C", "Song source-C", "Artist",
                                 "video-B", "Video video-B", 0.95, false,
-                                List.of(), 2
+                                List.of(), 2, null
                         )
                 ),
                 response.matches());
@@ -192,9 +192,11 @@ class PlaylistPreviewResponseMapperTest {
         assertFalse(response.alreadyPresent());
         assertEquals(List.of(
                 new TrackReviewOptionResponse(
-                        "video-A", "Song A", "Artist", 202_000, 0.98, false),
+                        "video-A", "Song A", "Artist",
+                        202_000, 0.98, false, null),
                 new TrackReviewOptionResponse(
-                        "video-B", "Artist - Song A", "Label", 0, 0.96, true)
+                        "video-B", "Artist - Song A", "Label",
+                        0, 0.96, true, null)
         ), response.reviewOptions());
         assertEquals(1, response.trackPosition());
     }
