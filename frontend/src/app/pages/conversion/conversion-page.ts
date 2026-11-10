@@ -6,6 +6,7 @@ import { PlaylistPreviewApi } from '../../core/api/playlist-preview-api';
 import { PlaylistPreviewResponse } from '../../core/models/playlist-preview-response';
 import { PlaylistVisibility } from '../../core/models/playlist-visibility';
 import { PlaylistConversionResponse } from '../../core/models/playlist-conversion-response';
+import { HttpErrorResponse } from '@angular/common/http';
 
 type DestinationMode = 'new' | 'existing';
 
@@ -26,6 +27,58 @@ export class ConversionPage {
   readonly conversionResult = signal<PlaylistConversionResponse | null>(null);
   readonly destinationMode = signal<DestinationMode>('new');
 
+  private readonly reviewSelections = signal<Readonly<Record<number, string>>>({});
+
+  readonly reviewedMatches = computed(() =>{
+    const selections = this.reviewSelections();
+
+    return (this.preview()?.matches ?? []).map((match) => {
+      const selected  = match.reviewOptions.find(
+        (option) => option.destinationTrackId ===selections[match.trackPosition],
+      );
+
+      if (!selected){
+        return match;
+      }
+
+      return{
+        ...match,
+        destinationTrackId: selected.destinationTrackId,
+        destinationTitle: selected.destinationTitle,
+        artworkUrl: selected.artworkUrl,
+        confidence: selected.confidence,
+        alreadyPresent: selected.alreadyPresent,
+      };
+    });
+  });
+
+  readonly reviewSummary = computed(() => {
+    const stored = this.preview();
+
+    if (!stored) {
+      return { alreadyPresent: 0, newTrackCount: 0 };
+    }
+
+    if (Object.keys(this.reviewSelections()).length === 0) {
+      return {
+        alreadyPresent: stored.alreadyPresent,
+        newTrackCount: stored.newTrackCount,
+      };
+    }
+
+    const matches = this.reviewedMatches();
+    const newIds = new Set(
+      matches
+        .filter((match) => !match.alreadyPresent)
+        .map((match) => match.destinationTrackId),
+    );
+
+    return {
+      alreadyPresent: matches.filter((match) => match.alreadyPresent).length,
+      newTrackCount: newIds.size,
+    };
+  });
+
   readonly canConfirm = computed(() => {
     const stored = this.preview();
 
@@ -34,7 +87,7 @@ export class ConversionPage {
     }
 
     return stored.destinationPlaylistId !== null
-      || stored.newTrackCount > 0;
+      || this.reviewSummary().newTrackCount > 0;
   });
 
   readonly form = new FormGroup({
@@ -130,7 +183,7 @@ export class ConversionPage {
       )
       .subscribe({
         next: () => {
-          this.preview.set(null);
+          this.clearPreview();
           this.form.enable();
         },
         error: () => this.errorMessage.set(
@@ -150,7 +203,7 @@ export class ConversionPage {
     this.loading.set(true);
     this.confirming.set(true);
 
-    this.previewApi.confirmPreview(stored.previewId)
+    this.previewApi.confirmPreview(stored.previewId, this.reviewSelections())
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
@@ -161,10 +214,20 @@ export class ConversionPage {
       .subscribe({
         next: (response) => {
           this.conversionResult.set(response);
-          this.preview.set(null);
+          this.clearPreview();
         },
-        error: () => {
-          this.preview.set(null);
+        error: (error: unknown) => {
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === 400
+            && error.error?.code === 'INVALID_TRACK_SELECTION') {
+            this.errorMessage.set(
+              'Uma das escolhas é inválida. Revise as opções e confirme novamente.',
+            );
+            return;
+          }
+
+          this.clearPreview();
           this.form.enable();
           this.errorMessage.set(
             'Não foi possível confirmar o resultado da conversão. '
@@ -202,5 +265,42 @@ export class ConversionPage {
       destinationName: values.destinationName.trim(),
       visibility: values.visibility,
     });
+  }
+
+  selectReviewOption(trackPosition: number, videoId: string): void {
+    if (this.loading()) {
+      return;
+    }
+
+    const match = this.preview()?.matches.find(
+      (item) => item.trackPosition === trackPosition,
+    );
+
+    if (!match?.reviewOptions.some((option) => option.destinationTrackId === videoId)) {
+      return;
+    }
+
+    this.reviewSelections.update((current) => ({
+      ...current,
+      [trackPosition]: videoId,
+    }));
+    this.errorMessage.set('');
+  }
+
+  formatDuration(durationMs: number): string {
+    if (durationMs <= 0) {
+      return 'Duração indisponível';
+    }
+
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+
+    return `${minutes}:${seconds}`;
+  }
+
+  private clearPreview(): void {
+    this.preview.set(null);
+    this.reviewSelections.set({});
   }
 }

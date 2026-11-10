@@ -131,6 +131,36 @@ describe('PlaylistPreviewApi', () => {
     expect(await responsePromise).toEqual(expected);
   });
 
+  it('shouldConfirmPreviewWithTrackSelections', async () => {
+    const previewId = '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206';
+
+    const responsePromise = firstValueFrom(
+      api.confirmPreview(previewId, { 1: 'video-B' }),
+    );
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      selections: { '1': 'video-B' },
+    });
+
+    request.flush({
+      sourcePlaylistId: 'source-playlist',
+      destinationPlaylistId: 'destination-playlist',
+      destinationPlaylistUrl:
+        'https://www.youtube.com/playlist?list=destination-playlist',
+      insertedCount: 1,
+      skippedCount: 0,
+      notFoundCount: 0,
+      notFound: [],
+    });
+
+    expect((await responsePromise).insertedCount).toBe(1);
+  });
+
   it('shouldCancelPreviewByIdAndAcceptNoContent', async () => {
     const previewId = '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206';
 
@@ -209,6 +239,9 @@ describe('PlaylistPreviewApi', () => {
           destinationTitle: 'Minha música — Official Audio',
           confidence: 0.95,
           alreadyPresent: true,
+          trackPosition: 0,
+          reviewOptions: [],
+          artworkUrl: null,
         },
       ],
       notFound: [],

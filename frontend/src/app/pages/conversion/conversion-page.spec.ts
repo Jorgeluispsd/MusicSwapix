@@ -212,6 +212,8 @@ describe('ConversionPage', () => {
             destinationTitle: 'Video A',
             confidence: 0.95,
             alreadyPresent: false,
+            trackPosition: 0,
+            reviewOptions: [],
           },
         ],
         notFound: [],
@@ -481,5 +483,87 @@ describe('ConversionPage', () => {
     expect(component.preview()).toBeNull();
     expect(component.conversionResult()?.insertedCount).toBe(0);
     expect(component.conversionResult()?.skippedCount).toBe(1);
+  });
+
+  it('shouldKeepReviewOpenAfterAnInvalidSelection', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const original = component.preview()!;
+
+    const stored = {
+      ...original,
+      destinationPlaylistId: 'PL-existing',
+      matches: [{
+        ...original.matches[0],
+        trackPosition: 1,
+        reviewOptions: [
+          {
+            destinationTrackId: 'video-A',
+            destinationTitle: 'Video A',
+            channelTitle: 'Artist A',
+            durationMs: 200_000,
+            confidence: 0.95,
+            alreadyPresent: false,
+            artworkUrl: null,
+          },
+          {
+            destinationTrackId: 'video-B',
+            destinationTitle: 'Video B',
+            channelTitle: 'Label',
+            durationMs: 202_000,
+            confidence: 0.94,
+            alreadyPresent: true,
+            artworkUrl: null,
+          },
+        ],
+      }],
+    };
+
+    component.preview.set(stored);
+    component.selectReviewOption(1, 'video-B');
+
+    expect(component.reviewSummary()).toEqual({
+      alreadyPresent: 1,
+      newTrackCount: 0,
+    });
+
+    const url = `/api/conversions/previews/${stored.previewId}/confirm`;
+
+    component.confirmPreview();
+
+    const rejected = httpTesting.expectOne(url);
+    expect(rejected.request.body).toEqual({
+      selections: { 1: 'video-B' },
+    });
+
+    rejected.flush(
+      { code: 'INVALID_TRACK_SELECTION' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+
+    expect(component.preview()).toBe(stored);
+    expect(component.loading()).toBe(false);
+    expect(component.errorMessage()).toContain('Revise');
+
+    component.selectReviewOption(1, 'video-A');
+    component.confirmPreview();
+
+    const corrected = httpTesting.expectOne(url);
+    expect(corrected.request.body).toEqual({
+      selections: { 1: 'video-A' },
+    });
+
+    corrected.flush({
+      sourcePlaylistId: stored.sourcePlaylistId,
+      destinationPlaylistId: 'PL-existing',
+      destinationPlaylistUrl: 'https://www.youtube.com/playlist?list=PL-existing',
+      insertedCount: 1,
+      skippedCount: 0,
+      notFoundCount: 0,
+      notFound: [],
+    });
+
+    expect(component.preview()).toBeNull();
+    expect(component.conversionResult()?.insertedCount).toBe(1);
   });
 });

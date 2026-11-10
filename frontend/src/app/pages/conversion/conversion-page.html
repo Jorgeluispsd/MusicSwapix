@@ -201,13 +201,52 @@
       <h3>Correspondências selecionadas</h3>
 
       <ul class="track-list">
-        @for (match of result.matches; track $index) {
+        @for (match of reviewedMatches(); track match.trackPosition) {
           <li>
             <strong>{{ match.sourceTitle }}</strong>
             <span>{{ match.sourceArtist }}</span>
-            <p>→ {{ match.destinationTitle }}</p>
+            <div class="track-with-artwork">
+              @if (match.artworkUrl; as artworkUrl) {
+                <img class="track-artwork" [src]="artworkUrl" alt="" loading="lazy" />
+              }
+              <span>→ {{ match.destinationTitle }}</span>
+            </div>
+
             @if (match.alreadyPresent) {
               <small>Já presente no destino — não será adicionada novamente.</small>
+            }
+
+            @if (match.reviewOptions.length > 1) {
+              <fieldset class="review-options" [disabled]="loading()">
+                <legend>Escolha uma versão de {{ match.sourceTitle }}</legend>
+
+                @for (option of match.reviewOptions; track option.destinationTrackId) {
+                  <div class="review-option">
+                    @if (option.artworkUrl; as artworkUrl) {
+                      <img class="track-artwork" [src]="artworkUrl" alt="" loading="lazy" />
+                    }
+                    <label>
+                      <input
+                        type="radio"
+                        [name]="'review-track-' + match.trackPosition"
+                        [checked]="option.destinationTrackId === match.destinationTrackId"
+                        (change)="selectReviewOption(match.trackPosition, option.destinationTrackId)"
+                      />
+                      {{ option.destinationTitle }} · {{ option.channelTitle }}
+                      · {{ formatDuration(option.durationMs) }}
+                      @if (option.alreadyPresent) {
+                        · Já presente
+                      }
+                    </label>
+
+                    <a
+                      [href]="'https://www.youtube.com/watch?v=' + option.destinationTrackId"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >Abrir vídeo ↗</a>
+                  </div>
+                }
+              </fieldset>
             }
           </li>
         } @empty {

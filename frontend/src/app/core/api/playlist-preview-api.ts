@@ -30,10 +30,15 @@ export class PlaylistPreviewApi {
     );
   }
 
-  confirmPreview(previewId: string): Observable<PlaylistConversionResponse> {
+  confirmPreview(previewId: string, selections: Readonly<Record<number, string>> = {},
+                 ): Observable<PlaylistConversionResponse> {
+    const body = Object.keys(selections).length > 0
+      ? { selections }
+      : null;
+
     return this.http.post<PlaylistConversionResponse>(
       `/api/conversions/previews/${encodeURIComponent(previewId)}/confirm`,
-      null,
+      body,
     );
   }
 

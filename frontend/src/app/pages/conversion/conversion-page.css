@@ -143,3 +143,44 @@ small {
   border-color: var(--color-accent);
   background: rgb(255 53 71 / 12%);
 }
+
+.review-options {
+  margin-top: 12px;
+  min-inline-size: 0;
+  border: 1px solid #454545;
+  border-radius: 7px;
+}
+
+.review-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 8px 0;
+}
+
+.review-option input[type="radio"] {
+  width: auto;
+  accent-color: var(--color-accent);
+}
+
+.review-option a {
+  color: var(--color-text);
+}
+
+.track-with-artwork,
+.review-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.track-with-artwork {
+  margin: 12px 0;
+}
+
+.track-artwork {
+  width: 96px;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: 6px;
+}

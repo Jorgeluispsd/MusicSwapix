@@ -1,5 +1,15 @@
 import { PlaylistVisibility } from './playlist-visibility';
 
+export interface TrackReviewOptionResponse {
+  destinationTrackId: string;
+  destinationTitle: string;
+  channelTitle: string;
+  durationMs: number;
+  confidence: number;
+  alreadyPresent: boolean;
+  artworkUrl: string | null;
+}
+
 export interface MatchedTrackResponse {
   sourceTrackId: string;
   sourceTitle: string;
@@ -8,6 +18,9 @@ export interface MatchedTrackResponse {
   destinationTitle: string;
   confidence: number;
   alreadyPresent: boolean;
+  trackPosition: number;
+  reviewOptions: TrackReviewOptionResponse[];
+  artworkUrl: string | null;
 }
 
 export interface UnmatchedTrackResponse {
