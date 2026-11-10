@@ -171,4 +171,26 @@ class TrackMatcherPlaylistSelectionTest {
 
         assertEquals("youtube-close", result.matchedId());
     }
+
+    @Test
+    void shouldRankOnlyEligibleCandidatesByDuration() {
+        Song source = new Song(
+                "spotify-track", "My Song", "Small Artist", 200_000);
+
+        Song longerVideo = new Song(
+                "youtube-long", "My Song", "Small Artist", 465_000);
+
+        Song liveVideo = new Song(
+                "youtube-live", "My Song (Live)", "Small Artist", 200_000);
+
+        Song closeDurationVideo = new Song(
+                "youtube-close", "My Song", "Small Artist", 202_000);
+
+        var ranked = matcher.rankCandidates(
+                source, List.of(longerVideo, liveVideo, closeDurationVideo));
+
+        assertEquals(
+                List.of("youtube-close", "youtube-long"),
+                ranked.stream().map(option -> option.song().id()).toList());
+    }
 }

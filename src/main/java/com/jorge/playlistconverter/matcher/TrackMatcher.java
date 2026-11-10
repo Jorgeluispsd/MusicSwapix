@@ -14,13 +14,9 @@ import java.util.regex.Pattern;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Comparator;
 
-/**
- * Compara títulos e artistas normalizados usando Jaro-Winkler, com penalidades
- * para versões diferentes e ajustes para os metadados dos candidatos.
- * Retorna o melhor resultado conforme o limiar atual, sem chamadas às APIs nem escrita.
- * A pontuação indica semelhança; revisão e confirmação do usuário pertencem à Fase 8.
- */
 @Slf4j
 public class TrackMatcher {
 
@@ -58,19 +54,28 @@ public class TrackMatcher {
     private final JaroWinklerSimilarity jaroWinkler = new JaroWinklerSimilarity();
     private final TrackVersionMatcher versionMatcher = new TrackVersionMatcher();
 
-    public MatchResult findBestMatch(Song sourceSong, List<Song> candidates) {
-        if (candidates == null || candidates.isEmpty()) {
+    public MatchResult findBestMatch(Song sourceSong, List<Song> candidates){
+        List<RankedTrackCandidate> ranked = rankCandidates(sourceSong, candidates);
+
+        if (ranked.isEmpty()){
             return new MatchResult(sourceSong, null, null, 0.0);
+        }
+
+        RankedTrackCandidate best = ranked.getFirst();
+
+        return new MatchResult(sourceSong, best.song().id(), best.song().title(), best.confidence());
+    }
+
+    public List<RankedTrackCandidate> rankCandidates(Song sourceSong, List<Song> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return List.of();
         }
 
         String rawSourceTitle = sourceSong.title().toLowerCase();
         String normalizedSourceTitle = normalizeMatchTitle(sourceSong.title());
         String normalizedSourceArtist = normalizeText(sourceSong.artist());
 
-        Song bestMatch = null;
-        double bestScore = 0.0;
-        double bestRankingScore = 0.0;
-        boolean bestChannelMatchesArtist = false;
+        List<RankedTrackCandidate> ranked = new ArrayList<>();
 
         int sourcePartNumber = extractPartNumber(sourceSong.title());
 
@@ -132,22 +137,13 @@ public class TrackMatcher {
 
             double rankingScore = scoreForRanking(score, sourceSong, candidate);
 
-            boolean winsOnChannelTie = rankingScore == bestRankingScore && channelMatchesArtist
-                    && !bestChannelMatchesArtist;
-
-            if (rankingScore > bestRankingScore || winsOnChannelTie){
-                bestRankingScore= rankingScore;
-                bestScore = score;
-                bestMatch = candidate;
-                bestChannelMatchesArtist = channelMatchesArtist;
-            }
+            ranked.add(new RankedTrackCandidate(candidate, score, rankingScore, channelMatchesArtist));
         }
 
-        if (bestMatch == null) {
-            return new MatchResult(sourceSong, null, null, 0.0);
-        }
+        ranked.sort(Comparator.comparingDouble(RankedTrackCandidate::rankingScore)
+                .reversed().thenComparing(option -> !option.channelMatchesArtist()));
 
-        return new MatchResult(sourceSong, bestMatch.id(), bestMatch.title(), bestScore);
+        return List.copyOf(ranked);
     }
 
     private double scoreForRanking(double score,  Song source, Song candidate){
