@@ -10,7 +10,8 @@ import java.util.regex.Pattern;
 public class TrackVersionMatcher {
 
     private static final List<Pattern> VERSION_PATTERNS = List.of(
-            Pattern.compile("\\b(?:ao\\s+vivo|live)\\b"),
+            Pattern.compile("\\b(?:ao\\s+vivo|live"
+                    + "|olympics?\\s+(?:opening|closing)\\s+ceremony)\\b"),
             Pattern.compile("\\bremix\\b"),
             Pattern.compile("\\bcover\\b"),
             Pattern.compile("\\binstrumental\\b"));

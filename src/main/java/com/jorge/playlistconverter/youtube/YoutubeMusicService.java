@@ -18,6 +18,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 public class YoutubeMusicService implements MusicService {
@@ -95,7 +99,7 @@ public class YoutubeMusicService implements MusicService {
         List<Song> candidates = searchByQuery(query);
 
         if (!candidates.isEmpty()){
-            return candidates;
+            return withVideoDurations(candidates);
         }
 
         String simplifiedTitle = simplifySearchTitle(sourceSong.title());
@@ -105,7 +109,7 @@ public class YoutubeMusicService implements MusicService {
             return candidates;
         }
 
-        return searchByQuery(simplifiedQuery);
+        return withVideoDurations(searchByQuery(simplifiedQuery));
     }
 
     private List<Song> searchByQuery(String query){
@@ -327,5 +331,48 @@ public class YoutubeMusicService implements MusicService {
                 .replaceAll("\\([^)]*\\)|\\[[^]]*\\]", " ")
                 .replaceAll("\\s+", " ")
                 .strip();
+    }
+
+    private List<Song> withVideoDurations(List<Song> candidates){
+        if (candidates.isEmpty()){
+            return candidates;
+        }
+
+        List<String> videoIds = candidates.stream().map(Song::id).distinct().toList();
+
+        Map<String, Integer> durationsById = new HashMap<>();
+
+        try {
+            VideoListResponse response = youtube.videos().list(List.of("contentDetails"))
+                    .setId(videoIds).setKey(apiKey).execute();
+
+            if (response.getItems() != null){
+                for (Video video : response.getItems()){
+                    durationsById.put(video.getId(), readDurationMs(video));
+                }
+            }
+
+        }catch (IOException e){
+            log.debug("Duração dos candidatos indisponível. Tipo: {}", e.getClass().getSimpleName());
+            return candidates;
+        }
+
+        return candidates.stream().map(song -> new Song(song.id(), song.title(), song.artist(),
+                durationsById.getOrDefault(song.id(), 0))).toList();
+    }
+
+    private int readDurationMs(Video video){
+        VideoContentDetails details = video.getContentDetails();
+
+        if (details == null || details.getDuration() == null){
+            return 0;
+        }
+
+        try {
+            return Math.toIntExact(Duration.parse(details.getDuration()).toMillis());
+
+        }catch (DateTimeParseException | ArithmeticException e){
+            return 0;
+        }
     }
 }

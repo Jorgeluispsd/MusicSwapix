@@ -9,6 +9,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Arrays;
 import java.util.Set;
@@ -50,6 +51,9 @@ public class TrackMatcher {
     private static final double MIN_CONFIDENCE = 0.6;
     private static final double CONTAINMENT_FLOOR = 0.5;
     private static final int HASHTAG_SPAM_THRESHOLD = 2;
+    private static final int MIN_DURATION_TOLERANCE_MS = 15_000;
+    private static final double DURATION_TOLERANCE_RATIO = 0.10;
+    private static final double DURATION_MISMATCH_FACTOR = 0.85;
 
     private final JaroWinklerSimilarity jaroWinkler = new JaroWinklerSimilarity();
     private final TrackVersionMatcher versionMatcher = new TrackVersionMatcher();
@@ -65,6 +69,8 @@ public class TrackMatcher {
 
         Song bestMatch = null;
         double bestScore = 0.0;
+        double bestRankingScore = 0.0;
+        boolean bestChannelMatchesArtist = false;
 
         int sourcePartNumber = extractPartNumber(sourceSong.title());
 
@@ -92,6 +98,17 @@ public class TrackMatcher {
             String normalizedCandidateTitle = normalizeMatchTitle(candidate.title());
             String normalizedCandidateArtist = normalizeText(candidate.artist());
 
+            boolean channelMatchesArtist = !normalizedSourceArtist.isBlank()
+                    && normalizedSourceArtist.equals(normalizedCandidateArtist);
+
+            Matcher artistCredit = Pattern.compile("^" + Pattern.quote(normalizedSourceArtist) + "\\s*[-–—:]\\s*")
+                    .matcher(normalizedCandidateTitle);
+
+            if (!normalizedSourceArtist.isBlank() && artistCredit.find()){
+                normalizedCandidateArtist = normalizedSourceArtist;
+                normalizedCandidateTitle = normalizedCandidateTitle.substring(artistCredit.end()).strip();
+            }
+
             double titleSimilarity = computeTitleSimilarity(normalizedSourceTitle, normalizedCandidateTitle);
             double artistSimilarity = jaroWinkler.apply(normalizedSourceArtist, normalizedCandidateArtist);
 
@@ -109,17 +126,43 @@ public class TrackMatcher {
                     candidate.artist(),
                     score);
 
-            if (score > bestScore) {
+            if (score < MIN_CONFIDENCE){
+                continue;
+            }
+
+            double rankingScore = scoreForRanking(score, sourceSong, candidate);
+
+            boolean winsOnChannelTie = rankingScore == bestRankingScore && channelMatchesArtist
+                    && !bestChannelMatchesArtist;
+
+            if (rankingScore > bestRankingScore || winsOnChannelTie){
+                bestRankingScore= rankingScore;
                 bestScore = score;
                 bestMatch = candidate;
+                bestChannelMatchesArtist = channelMatchesArtist;
             }
         }
 
-        if (bestScore < MIN_CONFIDENCE) {
+        if (bestMatch == null) {
             return new MatchResult(sourceSong, null, null, 0.0);
         }
 
         return new MatchResult(sourceSong, bestMatch.id(), bestMatch.title(), bestScore);
+    }
+
+    private double scoreForRanking(double score,  Song source, Song candidate){
+        int sourceDuration = source.durationMs();
+        int candidateDuration = candidate.durationMs();
+
+        if (sourceDuration <= 0 || candidateDuration <= 0){
+            return score;
+        }
+
+        double tolerance = Math.max(MIN_DURATION_TOLERANCE_MS, sourceDuration * DURATION_TOLERANCE_RATIO);
+
+        int difference = Math.abs(sourceDuration - candidateDuration);
+
+        return difference > tolerance ? score * DURATION_MISMATCH_FACTOR : score;
     }
 
     private double computeTitleSimilarity(String normalizedSourceTitle, String normalizedCandidateTitle) {

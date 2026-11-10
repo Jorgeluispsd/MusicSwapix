@@ -112,4 +112,63 @@ class TrackMatcherPlaylistSelectionTest {
 
         assertFalse(result.found());
     }
+
+    @Test
+    void shouldPreferCreditedReleaseFromDifferentChannel() {
+        Song source = new Song(
+                "spotify-suzuki",
+                "Suzuki (from GTAVI: The Album)",
+                "Fuerza Regida",
+                112000);
+
+        Song labelRelease = new Song(
+                "label-release",
+                "Fuerza Regida - Suzuki (From Grand Theft Auto VI: The Album)",
+                "Atlantic Records",
+                0);
+
+        Song fanUpload = new Song(
+                "fan-upload",
+                "Suzuki",
+                "Fuerza Regida Fans",
+                0);
+
+        MatchResult result = matcher.findBestMatch(
+                source, List.of(fanUpload, labelRelease));
+
+        assertEquals("label-release", result.matchedId());
+    }
+
+    @Test
+    void shouldRejectOlympicCeremonyForStudioTrack() {
+        Song source = new Song(
+                "spotify-nightcall", "Nightcall", "Kavinsky", 0);
+
+        Song ceremony = new Song(
+                "youtube-ceremony",
+                "Kavinsky - Nightcall | 2024 Olympics Closing Ceremony",
+                "Kavinsky",
+                0);
+
+        MatchResult result = matcher.findBestMatch(source, List.of(ceremony));
+
+        assertFalse(result.found());
+    }
+
+    @Test
+    void shouldPreferCandidateWithCompatibleDuration() {
+        Song source = new Song(
+                "spotify-track", "My Song", "Small Artist", 200_000);
+
+        Song longerVideo = new Song(
+                "youtube-long", "My Song", "Small Artist", 465_000);
+
+        Song closeDurationVideo = new Song(
+                "youtube-close", "My Song", "Small Artist", 202_000);
+
+        MatchResult result = matcher.findBestMatch(
+                source, List.of(longerVideo, closeDurationVideo));
+
+        assertEquals("youtube-close", result.matchedId());
+    }
 }

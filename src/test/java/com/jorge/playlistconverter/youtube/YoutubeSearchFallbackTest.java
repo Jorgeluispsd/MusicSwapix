@@ -15,6 +15,9 @@ import com.jorge.playlistconverter.model.Song;
 import com.jorge.playlistconverter.youtube.authorization.YoutubeAuthenticatedClientFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.google.api.services.youtube.model.Video;
+import com.google.api.services.youtube.model.VideoContentDetails;
+import com.google.api.services.youtube.model.VideoListResponse;
 
 import java.io.IOException;
 import java.util.List;
@@ -36,13 +39,22 @@ class YoutubeSearchFallbackTest {
 
     private YouTube youtube;
     private YoutubeMusicService service;
+    private YouTube.Videos.List videoDetailsRequest;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException{
         youtube = mock(YouTube.class);
 
         YoutubeAuthenticatedClientFactory clientFactory =
                 mock(YoutubeAuthenticatedClientFactory.class);
+
+        YouTube.Videos videos = mock(YouTube.Videos.class);
+        videoDetailsRequest = mock(YouTube.Videos.List.class, RETURNS_SELF);
+
+        when(youtube.videos()).thenReturn(videos);
+        when(videos.list(List.of("contentDetails"))).thenReturn(videoDetailsRequest);
+        when(videoDetailsRequest.execute())
+                .thenReturn(new VideoListResponse().setItems(List.of()));
 
         service = new YoutubeMusicService(
                 youtube,
@@ -228,6 +240,39 @@ class YoutubeSearchFallbackTest {
 
         assertEquals("IAN TRUNKS", result.get(0).artist());
         verify(request, times(1)).execute();
+    }
+
+    @Test
+    void shouldLoadCandidateDurationsInOneBatch() throws IOException {
+        YouTube.Search.List request = searchRequest();
+
+        SearchResult first = responseWithCandidate().getItems().getFirst();
+        SearchResult second = new SearchResult()
+                .setId(new ResourceId().setVideoId("second-video"))
+                .setSnippet(new SearchResultSnippet()
+                        .setTitle("Diamond Eyes")
+                        .setChannelTitle("Shinedown - Topic"));
+
+        when(request.execute()).thenReturn(
+                new SearchListResponse().setItems(List.of(first, second)));
+
+        when(videoDetailsRequest.execute()).thenReturn(
+                new VideoListResponse().setItems(List.of(
+                        new Video()
+                                .setId("second-video")
+                                .setContentDetails(new VideoContentDetails()
+                                        .setDuration("PT5M36S")))));
+
+        List<Song> result = service.searchCandidates(sourceSong);
+
+        assertEquals(List.of("video-id", "second-video"),
+                result.stream().map(Song::id).toList());
+        assertEquals(0, result.get(0).durationMs());
+        assertEquals(336_000, result.get(1).durationMs());
+
+        verify(request, times(1)).execute();
+        verify(videoDetailsRequest).setId(List.of("video-id", "second-video"));
+        verify(videoDetailsRequest, times(1)).execute();
     }
 
     private YouTube.Search.List searchRequest() throws IOException {
