@@ -8,6 +8,8 @@ import com.jorge.playlistconverter.dto.response.UnmatchedTrackResponse;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.model.MatchResult;
 import com.jorge.playlistconverter.model.Song;
+import com.jorge.playlistconverter.dto.response.TrackReviewOptionResponse;
+import com.jorge.playlistconverter.model.TrackReviewOption;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -57,15 +59,10 @@ class PlaylistPreviewResponseMapperTest {
                 1,
                 0L,
                 0,
-                List.of(new MatchedTrackResponse(
-                        "source-A",
-                        "Song source-A",
-                        "Artist",
-                        "video-A",
-                        "Video video-A",
-                        0.95,
-                        false)),
-                List.of());
+                List.of(new MatchedTrackResponse("source-A", "Song source-A",
+                        "Artist", "video-A", "Video video-A",
+                        0.95, false, List.of(), 0
+                )), List.of());
 
         assertEquals(expected, response);
     }
@@ -109,15 +106,18 @@ class PlaylistPreviewResponseMapperTest {
                 List.of(
                         new MatchedTrackResponse(
                                 "source-A", "Song source-A", "Artist",
-                                "video-A", "Video video-A", 0.95, true
+                                "video-A", "Video video-A", 0.95, true,
+                                List.of(), 0
                         ),
                         new MatchedTrackResponse(
                                 "source-B", "Song source-B", "Artist",
-                                "video-B", "Video video-B", 0.95, false
+                                "video-B", "Video video-B", 0.95, false,
+                                List.of(), 1
                         ),
                         new MatchedTrackResponse(
                                 "source-C", "Song source-C", "Artist",
-                                "video-B", "Video video-B", 0.95, false
+                                "video-B", "Video video-B", 0.95, false,
+                                List.of(), 2
                         )
                 ),
                 response.matches());
@@ -157,6 +157,46 @@ class PlaylistPreviewResponseMapperTest {
     void shouldRejectNullStoredPreview() {
         assertThrows(NullPointerException.class,
                 () -> mapper.toResponse(null));
+    }
+
+    @Test
+    void shouldMapReviewOptionsInOrderAndMarkVideosAlreadyPresent() {
+        Song source = new Song("source-A", "Song A", "Artist", 200_000);
+        Song suggested = new Song("video-A", "Song A", "Artist", 202_000);
+        Song alternative = new Song("video-B", "Artist - Song A", "Label", 0);
+
+        MatchResult missing = new MatchResult(new Song("source-missing", "Missing Song", "Artist", 0),
+                null, null, 0.0);
+
+        MatchResult match = new MatchResult(
+                source,
+                suggested.id(),
+                suggested.title(),
+                0.98,
+                List.of(
+                        new TrackReviewOption(suggested, 0.98),
+                        new TrackReviewOption(alternative, 0.96)));
+
+        PlaylistPreview preview = new PlaylistPreview(
+                "source-playlist",
+                "destination-playlist",
+                List.of(missing, match),
+                Set.of("video-B"));
+
+        StoredPlaylistPreview stored = new StoredPlaylistPreview(
+                PREVIEW_ID, preview, null, null, EXPIRES_AT);
+
+        MatchedTrackResponse response = mapper.toResponse(stored).matches().getFirst();
+
+        assertEquals("video-A", response.destinationTrackId());
+        assertFalse(response.alreadyPresent());
+        assertEquals(List.of(
+                new TrackReviewOptionResponse(
+                        "video-A", "Song A", "Artist", 202_000, 0.98, false),
+                new TrackReviewOptionResponse(
+                        "video-B", "Artist - Song A", "Label", 0, 0.96, true)
+        ), response.reviewOptions());
+        assertEquals(1, response.trackPosition());
     }
 
     private MatchResult match(String sourceId, String videoId) {

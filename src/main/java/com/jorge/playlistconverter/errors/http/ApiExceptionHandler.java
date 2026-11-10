@@ -5,6 +5,7 @@ import com.jorge.playlistconverter.dto.response.ApiErrorResponse;
 import com.jorge.playlistconverter.dto.response.FieldValidationErrorResponse;
 import com.jorge.playlistconverter.errors.authorization.AuthorizationDeniedException;
 import com.jorge.playlistconverter.errors.authorization.AuthorizationTimeoutException;
+import com.jorge.playlistconverter.errors.conversion.InvalidTrackSelectionException;
 import com.jorge.playlistconverter.errors.conversion.NoTracksToInsertException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewChangedException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
@@ -210,6 +211,16 @@ public class ApiExceptionHandler {
         return errorResponse(HttpStatus.BAD_REQUEST,
                 "INVALID_HISTORY_PAGINATION",
                 "Informe um limite entre 1 e 100 e um deslocamento maior ou igual a zero.", request);
+    }
+
+    @ExceptionHandler(InvalidTrackSelectionException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidTrackSelection(HttpServletRequest request){
+        ApiErrorResponse response = new ApiErrorResponse(HttpStatus.BAD_REQUEST.value(),
+                "INVALID_TRACK_SELECTION",
+                "Uma das escolhas é inválida. Revise as opções e confirme novamente.",
+                request.getRequestURI(), List.of());
+
+        return ResponseEntity.badRequest().body(response);
     }
 
     private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){

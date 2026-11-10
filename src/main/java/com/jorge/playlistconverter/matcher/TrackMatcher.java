@@ -2,6 +2,7 @@ package com.jorge.playlistconverter.matcher;
 
 import com.jorge.playlistconverter.model.MatchResult;
 import com.jorge.playlistconverter.model.Song;
+import com.jorge.playlistconverter.model.TrackReviewOption;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.apache.commons.text.StringEscapeUtils;
@@ -50,6 +51,8 @@ public class TrackMatcher {
     private static final int MIN_DURATION_TOLERANCE_MS = 15_000;
     private static final double DURATION_TOLERANCE_RATIO = 0.10;
     private static final double DURATION_MISMATCH_FACTOR = 0.85;
+    private static final double REVIEW_SCORE_MARGIN = 0.05;
+    private static final int MAX_REVIEW_OPTIONS = 3;
 
     private final JaroWinklerSimilarity jaroWinkler = new JaroWinklerSimilarity();
     private final TrackVersionMatcher versionMatcher = new TrackVersionMatcher();
@@ -57,13 +60,34 @@ public class TrackMatcher {
     public MatchResult findBestMatch(Song sourceSong, List<Song> candidates){
         List<RankedTrackCandidate> ranked = rankCandidates(sourceSong, candidates);
 
+        return toMatchResult(sourceSong, ranked, findReviewOptions(ranked));
+    }
+
+    private MatchResult toMatchResult(Song sourceSong, List<RankedTrackCandidate> ranked,
+                                      List<TrackReviewOption> reviewOptions){
+
         if (ranked.isEmpty()){
             return new MatchResult(sourceSong, null, null, 0.0);
         }
 
         RankedTrackCandidate best = ranked.getFirst();
 
-        return new MatchResult(sourceSong, best.song().id(), best.song().title(), best.confidence());
+        return new MatchResult(sourceSong, best.song().id(), best.song().title(), best.confidence(), reviewOptions);
+    }
+
+    private List<TrackReviewOption> findReviewOptions(List<RankedTrackCandidate> ranked){
+        if (ranked.size() < 2){
+            return List.of();
+        }
+
+        double minimumScore = ranked.getFirst().rankingScore() - REVIEW_SCORE_MARGIN;
+
+        List<TrackReviewOption> options = ranked.stream()
+                .takeWhile(candidate -> candidate.rankingScore() >= minimumScore)
+                .limit(MAX_REVIEW_OPTIONS).map(candidate -> new TrackReviewOption(
+                        candidate.song(), candidate.confidence())).toList();
+
+        return options.size() >= 2 ? options : List.of();
     }
 
     public List<RankedTrackCandidate> rankCandidates(Song sourceSong, List<Song> candidates) {
@@ -242,7 +266,7 @@ public class TrackMatcher {
                 .filter(song -> sourceTitle.equals(normalizeExistingTitle(song)))
                 .toList();
 
-        return findBestMatch(sourceSong, compatibleSongs);
+        return toMatchResult(sourceSong, rankCandidates(sourceSong, compatibleSongs), List.of());
     }
 
     private String normalizeExistingArtist(String artist){

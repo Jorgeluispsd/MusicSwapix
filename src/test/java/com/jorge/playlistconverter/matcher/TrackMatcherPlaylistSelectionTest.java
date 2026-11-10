@@ -170,6 +170,7 @@ class TrackMatcherPlaylistSelectionTest {
                 source, List.of(longerVideo, closeDurationVideo));
 
         assertEquals("youtube-close", result.matchedId());
+        assertTrue(result.reviewOptions().isEmpty());
     }
 
     @Test
@@ -192,5 +193,30 @@ class TrackMatcherPlaylistSelectionTest {
         assertEquals(
                 List.of("youtube-close", "youtube-long"),
                 ranked.stream().map(option -> option.song().id()).toList());
+    }
+
+    @Test
+    void shouldKeepCloseCandidatesAsReviewOptions() {
+        Song source = new Song(
+                "spotify-track", "My Song", "Small Artist", 200_000);
+
+        Song first = new Song(
+                "youtube-first", "My Song", "Small Artist", 200_000);
+
+        Song second = new Song(
+                "youtube-second", "My Song", "Small Artist", 202_000);
+
+        Song longer = new Song(
+                "youtube-long", "My Song", "Small Artist", 465_000);
+
+        MatchResult result = matcher.findBestMatch(
+                source, List.of(first, longer, second));
+
+        assertEquals("youtube-first", result.matchedId());
+        assertEquals(
+                List.of("youtube-first", "youtube-second"),
+                result.reviewOptions().stream()
+                        .map(option -> option.song().id())
+                        .toList());
     }
 }

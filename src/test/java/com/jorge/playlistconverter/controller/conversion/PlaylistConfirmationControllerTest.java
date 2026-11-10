@@ -6,6 +6,7 @@ import com.jorge.playlistconverter.dto.response.PlaylistConversionResponse;
 import com.jorge.playlistconverter.dto.response.UnmatchedTrackResponse;
 import com.jorge.playlistconverter.errors.authorization.AuthorizationDeniedException;
 import com.jorge.playlistconverter.errors.authorization.AuthorizationTimeoutException;
+import com.jorge.playlistconverter.errors.conversion.InvalidTrackSelectionException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewChangedException;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
 import com.jorge.playlistconverter.errors.http.ApiExceptionHandler;
@@ -27,6 +28,7 @@ import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
 import java.sql.SQLException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -301,6 +303,42 @@ class PlaylistConfirmationControllerTest {
                 "NO_TRACKS_TO_INSERT",
                 "A prévia não possui músicas encontradas para adicionar. "
                         + "Escolha outra playlist de origem e gere uma nova prévia.");
+    }
+
+    @Test
+    void shouldForwardTrackSelectionsToConfirmationService() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID, Map.of(1, "video-B")))
+                .thenReturn(new ConversionResult(
+                        "source-playlist", "destination-playlist",
+                        List.of(), 0, 0));
+
+        mockMvc.perform(post(CONFIRM_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"selections":{"1":"video-B"}}
+                            """))
+                .andExpect(status().isOk());
+
+        verify(confirmationService).confirm(PREVIEW_ID, Map.of(1, "video-B"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenTrackSelectionIsInvalid() throws Exception {
+        when(confirmationService.confirm(PREVIEW_ID, Map.of(1, "video-C")))
+                .thenThrow(new InvalidTrackSelectionException("Escolha inválida."));
+
+        var result = mockMvc.perform(post(CONFIRM_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"selections":{"1":"video-C"}}
+                            """))
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+        ApiErrorResponse response = jsonMapper.readValue(
+                result.getResponse().getContentAsString(), ApiErrorResponse.class);
+
+        assertEquals("INVALID_TRACK_SELECTION", response.code());
     }
 
     private void assertConfirmationFailure(int expectedStatus, String expectedCode,

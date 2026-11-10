@@ -1,13 +1,12 @@
 package com.jorge.playlistconverter.controller.conversion;
 
 import com.jorge.playlistconverter.converter.ConversionResult;
+import com.jorge.playlistconverter.dto.request.PlaylistConfirmationRequest;
 import com.jorge.playlistconverter.dto.response.PlaylistConversionResponse;
 import com.jorge.playlistconverter.mapper.PlaylistConversionResponseMapper;
 import com.jorge.playlistconverter.service.conversion.PlaylistConfirmationService;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -26,8 +25,12 @@ public class PlaylistConfirmationController {
     }
 
     @PostMapping("/{previewId}/confirm")
-    public PlaylistConversionResponse confirm(@PathVariable("previewId") UUID previewId){
-        ConversionResult result = confirmationService.confirm(previewId);
+    public PlaylistConversionResponse confirm(@PathVariable("previewId") UUID previewId,
+                                              @Valid @RequestBody(required = false)PlaylistConfirmationRequest request){
+        ConversionResult result = request == null ?
+                confirmationService.confirm(previewId):
+                confirmationService.confirm(previewId, request.selections());
+
         return responseMapper.toResponse(result);
     }
 }
