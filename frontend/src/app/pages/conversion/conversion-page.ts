@@ -1,12 +1,14 @@
 import {Component, computed,DestroyRef, inject, signal }  from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import { finalize, Observable } from 'rxjs';
 import { PlaylistPreviewApi } from '../../core/api/playlist-preview-api';
 import { PlaylistPreviewResponse } from '../../core/models/playlist-preview-response';
 import { PlaylistVisibility } from '../../core/models/playlist-visibility';
 import { PlaylistConversionResponse } from '../../core/models/playlist-conversion-response';
 import { HttpErrorResponse } from '@angular/common/http';
+import { PlaylistDestinationApi } from '../../core/api/playlist-destination-api';
+import { PlaylistDestinationResponse } from '../../core/models/playlist-destination-response';
+import {distinctUntilChanged, filter, finalize, map, Observable, startWith, takeUntil,} from 'rxjs';
 
 type DestinationMode = 'new' | 'existing';
 
@@ -18,6 +20,7 @@ type DestinationMode = 'new' | 'existing';
 })
 export class ConversionPage {
   private readonly previewApi = inject(PlaylistPreviewApi);
+  private readonly destinationApi = inject(PlaylistDestinationApi);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
@@ -27,6 +30,9 @@ export class ConversionPage {
   readonly conversionResult = signal<PlaylistConversionResponse | null>(null);
   readonly destinationMode = signal<DestinationMode>('new');
   readonly skippedPositions = signal<readonly number[]>([]);
+  readonly loadingDestinations = signal(false);
+  readonly savedDestinations = signal<PlaylistDestinationResponse[] | null>(null);
+  readonly destinationLookupError = signal('');
 
   private readonly reviewSelections = signal<Readonly<Record<number, string>>>({});
 
@@ -112,6 +118,69 @@ export class ConversionPage {
       nonNullable: true,
     }),
   });
+
+  constructor() {
+    const sourceControl = this.form.controls.sourcePlaylist;
+
+    sourceControl.valueChanges
+      .pipe(
+        startWith(sourceControl.value),
+        map((value) => value.trim()),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.savedDestinations.set(null);
+        this.destinationLookupError.set('');
+      });
+  }
+
+  findSavedDestinations(): void {
+    if (
+      this.destinationMode() !== 'existing' ||
+      this.loading() ||
+      this.loadingDestinations() ||
+      this.preview() ||
+      this.conversionResult()
+    ) {
+      return;
+    }
+
+    const sourceControl = this.form.controls.sourcePlaylist;
+    sourceControl.markAsTouched();
+
+    if (sourceControl.invalid) {
+      return;
+    }
+
+    const source = sourceControl.value.trim();
+    this.savedDestinations.set(null);
+    this.destinationLookupError.set('');
+    this.loadingDestinations.set(true);
+
+    this.destinationApi.findDestinations(source)
+      .pipe(
+        takeUntil(sourceControl.valueChanges.pipe(
+          filter((value) => value.trim() !== source),
+        )),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loadingDestinations.set(false)),
+      )
+      .subscribe({
+        next: (destinations) => this.savedDestinations.set(destinations),
+        error: () => this.destinationLookupError.set(
+          'Não foi possível consultar os destinos anteriores. Confira a origem e tente novamente.',
+        ),
+      });
+  }
+
+  useSavedDestination(destinationId: string): void {
+    if (this.loading() || this.destinationMode() !== 'existing') {
+      return;
+    }
+
+    this.form.controls.destinationPlaylist.setValue(destinationId);
+  }
 
   selectDestinationMode(mode: DestinationMode): void {
     if (this.loading() || this.preview() || this.conversionResult()) {

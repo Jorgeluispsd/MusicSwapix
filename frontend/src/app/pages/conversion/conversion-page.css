@@ -184,3 +184,19 @@ small {
   object-fit: contain;
   border-radius: 6px;
 }
+
+.saved-destinations {
+  margin-bottom: 24px;
+}
+
+.saved-destinations ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-destinations button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

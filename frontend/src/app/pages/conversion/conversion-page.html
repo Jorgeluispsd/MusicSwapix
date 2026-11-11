@@ -143,6 +143,40 @@
           </p>
         }
       </div>
+
+      <div class="saved-destinations">
+        <button
+          class="cancel-button"
+          type="button"
+          [disabled]="loading() || loadingDestinations()"
+          (click)="findSavedDestinations()"
+        >
+          {{ loadingDestinations() ? 'Buscando destinos…' : 'Buscar destinos anteriores' }}
+        </button>
+
+        @if (destinationLookupError(); as message) {
+          <p class="field-error" role="alert">{{ message }}</p>
+        }
+
+        @if (savedDestinations(); as destinations) {
+          <ul>
+            @for (destination of destinations; track destination.destinationPlaylistId) {
+              <li>
+                <button
+                  class="cancel-button"
+                  type="button"
+                  [disabled]="loading()"
+                  (click)="useSavedDestination(destination.destinationPlaylistId)"
+                >
+                  Usar {{ destination.destinationPlaylistId }}
+                </button>
+              </li>
+            } @empty {
+              <li>Nenhum destino anterior para essa origem.</li>
+            }
+          </ul>
+        }
+      </div>
     }
 
     <button
