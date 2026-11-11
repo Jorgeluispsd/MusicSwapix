@@ -11,6 +11,7 @@ import com.google.api.services.youtube.model.SearchResult;
 import com.google.api.services.youtube.model.SearchResultSnippet;
 import com.jorge.playlistconverter.errors.youtube.YoutubeQuotaExceededException;
 import com.jorge.playlistconverter.errors.youtube.YoutubeSearchException;
+import com.jorge.playlistconverter.errors.youtube.YoutubeSearchRateLimitException;
 import com.jorge.playlistconverter.model.Song;
 import com.jorge.playlistconverter.youtube.authorization.YoutubeAuthenticatedClientFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -167,6 +168,24 @@ class YoutubeSearchFallbackTest {
 
         assertSame(original, result.getCause());
 
+        verify(request, times(1)).execute();
+        verify(request, never()).setQ(SIMPLIFIED_QUERY);
+    }
+
+    @Test
+    void shouldReportSearchRateLimitWithoutTryingSimplifiedQuery() throws IOException {
+        var response = new HttpResponseException.Builder(
+                429, "Too Many Requests", new HttpHeaders());
+        var original = new GoogleJsonResponseException(response, null);
+
+        YouTube.Search.List request = searchRequest();
+        when(request.execute()).thenThrow(original);
+
+        YoutubeSearchRateLimitException result = assertThrows(
+                YoutubeSearchRateLimitException.class,
+                () -> service.searchCandidates(sourceSong));
+
+        assertSame(original, result.getCause());
         verify(request, times(1)).execute();
         verify(request, never()).setQ(SIMPLIFIED_QUERY);
     }

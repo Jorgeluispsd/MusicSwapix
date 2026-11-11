@@ -235,8 +235,8 @@ export class ConversionPage {
       )
       .subscribe({
         next: (response) => this.preview.set(response),
-        error: () => this.errorMessage.set(
-          'Não foi possível gerar a prévia. Tente novamente em instantes.',
+        error: (error : unknown) => this.errorMessage.set(
+          this.prepareErrorMessage(error),
         ),
       });
   }
@@ -304,6 +304,23 @@ export class ConversionPage {
 
           this.clearPreview();
           this.form.enable();
+
+          const code = this.apiErrorCode(error);
+
+          if (code === 'PREVIEW_UNAVAILABLE') {
+            this.errorMessage.set(
+              'Esta prévia expirou ou já foi encerrada. Gere uma nova prévia para continuar.',
+            );
+            return;
+          }
+
+          if (code === 'PREVIEW_CHANGED') {
+            this.errorMessage.set(
+              'A playlist de destino mudou desde a análise. Gere uma nova prévia para conferir os itens atuais.',
+            );
+            return;
+          }
+
           this.errorMessage.set(
             'Não foi possível confirmar o resultado da conversão. '
             + 'Confira a playlist no YouTube antes de gerar uma nova prévia, '
@@ -403,5 +420,46 @@ export class ConversionPage {
     delete selections[trackPosition];
     this.reviewSelections.set(selections);
     this.errorMessage.set('');
+  }
+
+  private apiErrorCode(error: unknown): string | undefined {
+    if (!(error instanceof HttpErrorResponse)) {
+      return undefined;
+    }
+
+    const code = error.error?.code;
+    return typeof code === 'string' ? code : undefined;
+  }
+
+  private prepareErrorMessage(error: unknown): string {
+    switch (this.apiErrorCode(error)) {
+      case 'YOUTUBE_QUOTA_EXCEEDED': {
+        const resetAt = error instanceof HttpErrorResponse
+          ? error.headers.get('X-YouTube-Quota-Reset-At')
+          : null;
+
+        const resetDate = resetAt ? new Date(resetAt) : null;
+
+        if (!resetDate || Number.isNaN(resetDate.getTime())) {
+          return 'A cota da API do YouTube foi atingida. Aguarde a renovação antes de tentar novamente.';
+        }
+
+        const localTime = resetDate.toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        return 'A cota da API do YouTube foi atingida. ' +
+        `A próxima renovação das cotas diárias está prevista para ${localTime}, no seu horário local.`;
+      }
+      case 'YOUTUBE_SEARCH_RATE_LIMITED':
+        return 'O YouTube limitou as buscas. Aguarde um pouco antes de tentar novamente.';
+      case 'SPOTIFY_RATE_LIMITED':
+        return 'O Spotify limitou as requisições. Aguarde um pouco antes de tentar novamente.';
+      case 'INVALID_PLAYLIST_INPUT':
+        return 'Confira se os links ou IDs das playlists correspondem às plataformas informadas.';
+      default:
+        return 'Não foi possível gerar a prévia. Tente novamente em instantes.';
+    }
   }
 }

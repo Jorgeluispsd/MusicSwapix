@@ -144,6 +144,10 @@ public class YoutubeMusicService implements MusicService {
                         + "Consulte a quota do projeto antes de tentar novamente.", e);
             }
 
+            if (e.getStatusCode() == 429) {
+                throw new YoutubeSearchRateLimitException(e);
+            }
+
             throw new YoutubeSearchException(
                     "A API do YouTube recusou a busca de candidatos. "
                             + "Código HTTP: " + e.getStatusCode() + ".", e);

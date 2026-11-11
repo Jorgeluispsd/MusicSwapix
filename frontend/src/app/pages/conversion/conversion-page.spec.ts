@@ -626,4 +626,52 @@ describe('ConversionPage', () => {
     expect(component.conversionResult()?.skippedByUserCount).toBe(1);
     expect(component.skippedPositions()).toEqual([]);
   });
+
+  it('shouldExplainYouTubeQuotaFailureDuringPreparation', () => {
+    const component = TestBed.createComponent(ConversionPage).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.form.patchValue({
+      sourcePlaylist: 'source-playlist',
+      destinationName: 'Minha playlist',
+    });
+
+    component.preparePreview();
+
+    httpTesting.expectOne('/api/conversions/previews/new').flush(
+      { code: 'YOUTUBE_QUOTA_EXCEEDED' },
+      {
+        status: 429, statusText: 'Too Many Requests', headers: {
+          'X-YouTube-Quota-Reset-At': '2026-11-11T08:00:00Z',
+        },
+      }
+    );
+
+    const expectedTime = new Date('2026-11-11T08:00:00Z')
+      .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    expect(component.errorMessage()).toContain(
+      `prevista para ${expectedTime}, no seu horário local`,
+    );
+
+    expect(component.form.enabled).toBe(true);
+    expect(component.preview()).toBeNull();
+  });
+
+  it('shouldAskForNewPreviewWhenConfirmationIsUnavailable', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const previewId = component.preview()!.previewId;
+
+    component.confirmPreview();
+
+    httpTesting.expectOne(`/api/conversions/previews/${previewId}/confirm`).flush(
+      { code: 'PREVIEW_UNAVAILABLE' },
+      { status: 404, statusText: 'Not Found' },
+    );
+
+    expect(component.errorMessage()).toContain('Gere uma nova prévia');
+    expect(component.preview()).toBeNull();
+    expect(component.form.enabled).toBe(true);
+  });
 });

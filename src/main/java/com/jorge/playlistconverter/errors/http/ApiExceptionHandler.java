@@ -27,6 +27,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.util.List;
 import java.util.Objects;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -109,7 +111,17 @@ public class ApiExceptionHandler {
                         + "Confira o destino antes de iniciar uma nova tentativa.",
                 request.getRequestURI(), List.of());
 
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
+        ZoneId pacific = ZoneId.of("America/Los_Angeles");
+
+        String resetAt = ZonedDateTime.now(pacific)
+                .toLocalDate()
+                .plusDays(1)
+                .atStartOfDay(pacific)
+                .toInstant()
+                .toString();
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("X-YouTube-Quota-Reset-At", resetAt).body(response);
     }
 
     @ExceptionHandler(SpotifyRequestLimitException.class)
@@ -221,6 +233,19 @@ public class ApiExceptionHandler {
                 request.getRequestURI(), List.of());
 
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(YoutubeSearchRateLimitException.class)
+    public ResponseEntity<ApiErrorResponse> handleYoutubeSearchRateLimit(
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ApiErrorResponse(
+                        HttpStatus.TOO_MANY_REQUESTS.value(),
+                        "YOUTUBE_SEARCH_RATE_LIMITED",
+                        "O YouTube limitou as buscas. Aguarde um pouco antes de tentar novamente.",
+                        request.getRequestURI(),
+                        List.of()));
     }
 
     private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){
