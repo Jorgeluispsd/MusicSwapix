@@ -51,7 +51,7 @@ small {
   border: 0;
   border-radius: 7px;
   background: var(--color-accent);
-  color: white;
+  color: var(--color-background);
   font-weight: 700;
 }
 
@@ -199,4 +199,33 @@ small {
 .saved-destinations button {
   max-width: 100%;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .preview-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .track-with-artwork > span,
+  .review-option > label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .track-artwork {
+    width: 72px;
+    flex-shrink: 0;
+  }
+
+  .preview-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview-actions > :is(button, a) {
+    min-height: 44px;
+    text-align: center;
+  }
 }

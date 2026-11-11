@@ -214,3 +214,16 @@ h1 span {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
+
+@media (max-width: 480px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+
+  .app-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
