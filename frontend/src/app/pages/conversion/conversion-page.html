@@ -319,6 +319,12 @@
         </ul>
       }
 
+      @if (previewExpired()) {
+        <p class="field-error" role="status">
+          Esta prévia expirou. Volte à preparação para gerar outra.
+        </p>
+      }
+
       <div class="preview-actions">
         <button
           class="preview-button"
@@ -335,7 +341,9 @@
           [disabled]="loading()"
           (click)="cancelPreview()"
         >
-          {{ loading() && !confirming() ? 'Cancelando…' : 'Cancelar prévia' }}
+          {{ previewExpired()
+          ? 'Voltar à preparação'
+          : loading() && !confirming() ? 'Cancelando…' : 'Cancelar prévia' }}
         </button>
       </div>
     </section>

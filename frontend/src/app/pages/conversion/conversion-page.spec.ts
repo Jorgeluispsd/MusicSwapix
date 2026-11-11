@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ConversionPage } from './conversion-page';
 import { provideHttpClient } from '@angular/common/http';
 import {HttpTestingController, provideHttpClientTesting,} from '@angular/common/http/testing';
+import { vi } from 'vitest';
 
 describe('ConversionPage', () => {
   beforeEach(async () => {
@@ -176,7 +177,7 @@ describe('ConversionPage', () => {
     );
   });
 
-  function createPageWithPreview(): ConversionPage {
+  function createPageWithPreview(expiresAt = '2099-01-01T12:00:00Z',): ConversionPage {
     const component = TestBed.createComponent(ConversionPage).componentInstance;
 
     component.form.setValue({
@@ -196,7 +197,7 @@ describe('ConversionPage', () => {
         destinationPlaylistId: null,
         destinationName: 'Meu Rock',
         visibility: 'PRIVATE',
-        expiresAt: '2099-01-01T12:00:00Z',
+        expiresAt: expiresAt,
         total: 1,
         found: 1,
         alreadyPresent: 0,
@@ -673,5 +674,33 @@ describe('ConversionPage', () => {
     expect(component.errorMessage()).toContain('Gere uma nova prévia');
     expect(component.preview()).toBeNull();
     expect(component.form.enabled).toBe(true);
+  });
+
+  it('shouldBlockConfirmationWhenPreviewExpiresOnScreen', () => {
+    vi.useFakeTimers();
+
+    try {
+      const expiresAt = new Date(Date.now() + 1_000).toISOString();
+      const component = createPageWithPreview(expiresAt);
+      const httpTesting = TestBed.inject(HttpTestingController);
+
+      expect(component.canConfirm()).toBe(true);
+
+      vi.advanceTimersByTime(1_000);
+
+      expect(component.previewExpired()).toBe(true);
+      expect(component.canConfirm()).toBe(false);
+
+      component.confirmPreview();
+      component.cancelPreview();
+
+      httpTesting.expectNone((request) =>
+        request.method === 'POST' || request.method === 'DELETE',
+      );
+      expect(component.preview()).toBeNull();
+      expect(component.form.enabled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

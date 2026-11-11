@@ -91,10 +91,13 @@ export class ConversionPage {
     };
   });
 
+  readonly previewExpired = signal(false);
+  private previewExpirationTimer: ReturnType<typeof setTimeout> | undefined;
+
   readonly canConfirm = computed(() => {
     const stored = this.preview();
 
-    if (!stored || this.loading()) {
+    if (!stored || this.loading() || this.previewExpired()) {
       return false;
     }
 
@@ -120,6 +123,8 @@ export class ConversionPage {
   });
 
   constructor() {
+    this.destroyRef.onDestroy(() => clearTimeout(this.previewExpirationTimer));
+
     const sourceControl = this.form.controls.sourcePlaylist;
 
     sourceControl.valueChanges
@@ -234,7 +239,10 @@ export class ConversionPage {
         }),
       )
       .subscribe({
-        next: (response) => this.preview.set(response),
+        next: (response) => {
+          this.preview.set(response);
+          this.watchPreviewExpiration(response.expiresAt);
+        },
         error: (error : unknown) => this.errorMessage.set(
           this.prepareErrorMessage(error),
         ),
@@ -245,6 +253,12 @@ export class ConversionPage {
     const stored = this.preview();
 
     if (!stored || this.loading()) {
+      return;
+    }
+
+    if (this.previewExpired()) {
+      this.clearPreview();
+      this.form.enable();
       return;
     }
 
@@ -271,6 +285,11 @@ export class ConversionPage {
     const stored = this.preview();
 
     if (!stored || !this.canConfirm()) {
+      return;
+    }
+
+    if (Date.parse(stored.expiresAt) <= Date.now()) {
+      this.previewExpired.set(true);
       return;
     }
 
@@ -392,9 +411,39 @@ export class ConversionPage {
   }
 
   private clearPreview(): void {
+    clearTimeout(this.previewExpirationTimer);
+    this.previewExpired.set(false);
+
     this.preview.set(null);
     this.reviewSelections.set({});
     this.skippedPositions.set([]);
+  }
+
+  private watchPreviewExpiration(expiresAt: string): void {
+    clearTimeout(this.previewExpirationTimer);
+    this.previewExpired.set(false);
+
+    const expirationTime = Date.parse(expiresAt);
+
+    if (!Number.isFinite(expirationTime)) {
+      return;
+    }
+
+    const checkExpiration = () => {
+      const remainingMs = expirationTime - Date.now();
+
+      if (remainingMs <= 0) {
+        this.previewExpired.set(true);
+        return;
+      }
+
+      this.previewExpirationTimer = setTimeout(
+        checkExpiration,
+        Math.min(remainingMs, 2_147_483_647),
+      );
+    };
+
+    checkExpiration();
   }
 
   toggleSkippedTrack(trackPosition: number): void {
