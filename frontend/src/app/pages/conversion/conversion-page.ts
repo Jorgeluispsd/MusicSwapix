@@ -340,6 +340,19 @@ export class ConversionPage {
             return;
           }
 
+          if (code === 'YOUTUBE_TRACK_INSERTION_FAILED') {
+            const nextStep = stored.destinationPlaylistId !== null
+              ? 'Confira a playlist no YouTube e gere uma nova prévia com o mesmo destino.'
+              : 'Localize a playlist criada no YouTube, selecione Playlist existente e gere uma nova prévia com o link dela.';
+
+            this.errorMessage.set(
+              'A conversão foi interrompida durante a inserção. '
+              + 'Algumas músicas podem já ter sido adicionadas. '
+              + nextStep,
+            );
+            return;
+          }
+
           this.errorMessage.set(
             'Não foi possível confirmar o resultado da conversão. '
             + 'Confira a playlist no YouTube antes de gerar uma nova prévia, '

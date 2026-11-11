@@ -703,4 +703,37 @@ describe('ConversionPage', () => {
       vi.useRealTimers();
     }
   });
+
+  it.each([
+    {
+      destinationPlaylistId: null,
+      guidance: 'Localize a playlist criada no YouTube',
+    },
+    {
+      destinationPlaylistId: 'PL-existing',
+      guidance: 'gere uma nova prévia com o mesmo destino',
+    },
+  ])('should explain recovery after an insertion failure ($destinationPlaylistId)', ({
+                                                                                       destinationPlaylistId,
+                                                                                       guidance,
+                                                                                     }) => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+    const original = component.preview()!;
+
+    component.preview.set({ ...original, destinationPlaylistId });
+    component.confirmPreview();
+
+    httpTesting
+      .expectOne(`/api/conversions/previews/${original.previewId}/confirm`)
+      .flush(
+        { code: 'YOUTUBE_TRACK_INSERTION_FAILED' },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+
+    expect(component.errorMessage()).toContain(guidance);
+    expect(component.preview()).toBeNull();
+    expect(component.form.enabled).toBe(true);
+    httpTesting.expectNone((request) => request.method === 'POST');
+  });
 });
