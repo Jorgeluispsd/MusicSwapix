@@ -2,12 +2,20 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
+import { of } from 'rxjs';
+import { ConversionHistoryApi } from './core/api/conversion-history-api';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)],
+      providers: [
+        provideRouter(routes),
+        {
+          provide: ConversionHistoryApi,
+          useValue: { findHistory: () => of({ entries: [], totalCount: 0 }) },
+        },
+      ],
     }).compileComponents();
   });
 

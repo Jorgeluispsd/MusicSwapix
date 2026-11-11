@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.json.JsonMapper;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -61,8 +62,11 @@ class ConversionHistoryControllerTest {
                         "SPOTIFY_TO_YOUTUBE", "SUCCESS",
                         startedAt, startedAt.plusMinutes(1))));
 
+        when(store.countSyncRunHistory()).thenReturn(41L);
+
         var result = mockMvc.perform(get(HISTORY_URL))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "41"))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andReturn();
 
@@ -78,20 +82,24 @@ class ConversionHistoryControllerTest {
         assertEquals(startedAt, response[0].startedAt());
 
         verify(store).findSyncRunHistory(20, 0);
+        verify(store).countSyncRunHistory();
         verifyNoMoreInteractions(store);
     }
 
     @Test
     void shouldUseRequestedPaginationAndReturnEmptyPage() throws Exception {
         when(store.findSyncRunHistory(20, 40)).thenReturn(List.of());
+        when(store.countSyncRunHistory()).thenReturn(40L);
 
         mockMvc.perform(get(HISTORY_URL)
                         .param("limit", "20")
                         .param("offset", "40"))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "40"))
                 .andExpect(content().string("[]"));
 
         verify(store).findSyncRunHistory(20, 40);
+        verify(store).countSyncRunHistory();
         verifyNoMoreInteractions(store);
     }
 

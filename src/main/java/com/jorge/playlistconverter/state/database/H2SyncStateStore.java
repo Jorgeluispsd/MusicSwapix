@@ -25,6 +25,7 @@ public class H2SyncStateStore implements SyncStateStore {
     private static final String FINISH_SYNC_RUN_PATH = "sql/queries/finish_sync_run.sql";
     private static final String FIND_SYNC_JOBS_BY_SOURCE_PATH = "sql/queries/find_sync_jobs_by_source.sql";
     private static final String FIND_SYNC_RUN_HISTORY_PATH = "sql/queries/find_sync_run_history.sql";
+    private static final String COUNT_SYNC_RUN_HISTORY_PATH = "sql/queries/count_sync_run_history.sql";
 
     private final String dbPath;
 
@@ -37,6 +38,7 @@ public class H2SyncStateStore implements SyncStateStore {
     private final String finishSyncRunSql;
     private final String findSyncJobsBySourceSql;
     private final String findSyncRunHistorySql;
+    private final String countSyncRunHistorySql;
 
     public H2SyncStateStore(SqlResourceLoader sqlResourceLoader, H2DatabaseInitializer databaseInitializer){
         this.dbPath = databaseInitializer.initialize();
@@ -50,6 +52,7 @@ public class H2SyncStateStore implements SyncStateStore {
         this.finishSyncRunSql = sqlResourceLoader.read(FINISH_SYNC_RUN_PATH);
         this.findSyncJobsBySourceSql = sqlResourceLoader.read(FIND_SYNC_JOBS_BY_SOURCE_PATH);
         this.findSyncRunHistorySql = sqlResourceLoader.read(FIND_SYNC_RUN_HISTORY_PATH);
+        this.countSyncRunHistorySql = sqlResourceLoader.read(COUNT_SYNC_RUN_HISTORY_PATH);
     }
 
     private Connection getConnection() throws SQLException {
@@ -298,6 +301,20 @@ public class H2SyncStateStore implements SyncStateStore {
         }catch (SQLException exception){
             throw new SyncStateStorageException(
                     "Não foi possível consultar o histórico das execuções.", exception);
+        }
+    }
+
+    @Override
+    public long countSyncRunHistory() {
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(countSyncRunHistorySql);
+             ResultSet result = statement.executeQuery()) {
+            result.next();
+
+            return result.getLong(1);
+
+        } catch (SQLException exception) {
+            throw new SyncStateStorageException("Não foi possível contar as execuções do histórico.", exception);
         }
     }
 }

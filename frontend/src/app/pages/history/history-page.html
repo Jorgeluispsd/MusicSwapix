@@ -1,7 +1,67 @@
 <section aria-labelledby="history-title">
   <h2 id="history-title">Histórico de conversões</h2>
 
-  <p class="page-description">
-    Consulte as execuções registradas e reencontre suas playlists de destino.
-  </p>
+  @if (loading()) {
+    <p role="status">Carregando histórico…</p>
+  }
+
+  @if (errorMessage(); as message) {
+    <p role="alert">{{ message }}</p>
+    @if (entries().length === 0) {
+      <button type="button" (click)="loadPage(0)">Tentar novamente</button>
+    }
+  }
+
+  @if (!loading() && !errorMessage() && entries().length === 0) {
+    <p>Nenhuma conversão registrada nesta página.</p>
+  }
+
+  @if (entries().length > 0 || page() > 0) {
+    <ul>
+      @for (entry of entries(); track entry.executionId) {
+        <li>
+          <p>
+            <strong>{{ statusLabel(entry.status) }}</strong>
+            @if (entry.startedAt) {
+              · {{ entry.startedAt | date: 'dd/MM/yyyy HH:mm' }}
+            }
+          </p>
+
+          <p>Origem: {{ entry.sourcePlaylistId }}</p>
+
+          @if (entry.destinationPlaylistUrl; as destinationUrl) {
+            <a
+              [href]="destinationUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir playlist de destino
+            </a>
+          } @else {
+            <p>Destino: {{ entry.destinationPlaylistId }}</p>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (totalPages() > 1) {
+      <nav class="history-pagination" aria-label="Páginas do histórico">
+        @for (item of paginationItems(); track $index) {
+          @if (item === 'ellipsis') {
+            <span aria-hidden="true">…</span>
+          } @else {
+            <button
+              type="button"
+              [attr.aria-label]="'Página ' + item"
+              [attr.aria-current]="item === page() + 1 ? 'page' : null"
+              [disabled]="loading() || item === page() + 1"
+              (click)="loadPage(item - 1)"
+            >
+              {{ item }}
+            </button>
+          }
+        }
+      </nav>
+    }
+  }
 </section>

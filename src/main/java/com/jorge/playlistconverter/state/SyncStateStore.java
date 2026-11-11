@@ -34,4 +34,6 @@ public interface SyncStateStore {
     List<SyncJob> findSyncJobsBySource(String sourcePlaylistId, String direction);
 
     List<SyncRunHistory> findSyncRunHistory(int limit, int offset);
+
+    long countSyncRunHistory();
 }

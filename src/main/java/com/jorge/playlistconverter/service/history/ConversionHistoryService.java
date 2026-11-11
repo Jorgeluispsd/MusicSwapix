@@ -25,4 +25,8 @@ public class ConversionHistoryService {
 
         return store.findSyncRunHistory(limit, offset);
     }
+
+    public long countHistory() {
+        return store.countSyncRunHistory();
+    }
 }
