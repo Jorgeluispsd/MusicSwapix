@@ -26,28 +26,33 @@ export class ConversionPage {
   readonly confirming = signal(false);
   readonly conversionResult = signal<PlaylistConversionResponse | null>(null);
   readonly destinationMode = signal<DestinationMode>('new');
+  readonly skippedPositions = signal<readonly number[]>([]);
 
   private readonly reviewSelections = signal<Readonly<Record<number, string>>>({});
 
   readonly reviewedMatches = computed(() =>{
     const selections = this.reviewSelections();
+    const skipped = this.skippedPositions();
 
     return (this.preview()?.matches ?? []).map((match) => {
-      const selected  = match.reviewOptions.find(
-        (option) => option.destinationTrackId ===selections[match.trackPosition],
+      const selected = match.reviewOptions.find(
+        (option) => option.destinationTrackId === selections[match.trackPosition],
       );
 
-      if (!selected){
-        return match;
-      }
+      const current = selected
+        ? {
+          ...match,
+          destinationTrackId: selected.destinationTrackId,
+          destinationTitle: selected.destinationTitle,
+          artworkUrl: selected.artworkUrl,
+          confidence: selected.confidence,
+          alreadyPresent: selected.alreadyPresent,
+        }
+        : match;
 
-      return{
-        ...match,
-        destinationTrackId: selected.destinationTrackId,
-        destinationTitle: selected.destinationTitle,
-        artworkUrl: selected.artworkUrl,
-        confidence: selected.confidence,
-        alreadyPresent: selected.alreadyPresent,
+      return {
+        ...current,
+        skippedByUser: skipped.includes(match.trackPosition),
       };
     });
   });
@@ -59,14 +64,15 @@ export class ConversionPage {
       return { alreadyPresent: 0, newTrackCount: 0 };
     }
 
-    if (Object.keys(this.reviewSelections()).length === 0) {
+    if (Object.keys(this.reviewSelections()).length === 0 && this.skippedPositions().length === 0) {
       return {
         alreadyPresent: stored.alreadyPresent,
         newTrackCount: stored.newTrackCount,
       };
     }
 
-    const matches = this.reviewedMatches();
+    const matches = this.reviewedMatches().filter(
+      (match) => !match.skippedByUser);
     const newIds = new Set(
       matches
         .filter((match) => !match.alreadyPresent)
@@ -203,7 +209,7 @@ export class ConversionPage {
     this.loading.set(true);
     this.confirming.set(true);
 
-    this.previewApi.confirmPreview(stored.previewId, this.reviewSelections())
+    this.previewApi.confirmPreview(stored.previewId, this.reviewSelections(), this.skippedPositions(),)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {
@@ -268,7 +274,7 @@ export class ConversionPage {
   }
 
   selectReviewOption(trackPosition: number, videoId: string): void {
-    if (this.loading()) {
+    if (this.loading() || this.skippedPositions().includes(trackPosition)) {
       return;
     }
 
@@ -302,5 +308,31 @@ export class ConversionPage {
   private clearPreview(): void {
     this.preview.set(null);
     this.reviewSelections.set({});
+    this.skippedPositions.set([]);
+  }
+
+  toggleSkippedTrack(trackPosition: number): void {
+    if (this.loading()) {
+      return;
+    }
+
+    const exists = this.preview()?.matches.some(
+      (match) => match.trackPosition === trackPosition,
+    );
+
+    if (!exists) {
+      return;
+    }
+
+    const isSkipped = this.skippedPositions().includes(trackPosition);
+
+    this.skippedPositions.update((positions) => isSkipped
+      ? positions.filter((position) => position !== trackPosition)
+      : [...positions, trackPosition]);
+
+    const selections = { ...this.reviewSelections() };
+    delete selections[trackPosition];
+    this.reviewSelections.set(selections);
+    this.errorMessage.set('');
   }
 }

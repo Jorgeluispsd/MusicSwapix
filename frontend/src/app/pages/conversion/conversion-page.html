@@ -193,6 +193,10 @@
           <dd>{{ result.newTrackCount }}</dd>
         </div>
         <div>
+          <dt>Puladas por você</dt>
+          <dd>{{ skippedPositions().length }}</dd>
+        </div>
+        <div>
           <dt>Sem correspondência</dt>
           <dd>{{ result.notFoundCount }}</dd>
         </div>
@@ -212,12 +216,26 @@
               <span>→ {{ match.destinationTitle }}</span>
             </div>
 
+            <button
+              class="cancel-button"
+              type="button"
+              [disabled]="loading()"
+              [attr.aria-pressed]="match.skippedByUser"
+              (click)="toggleSkippedTrack(match.trackPosition)"
+            >
+              {{ match.skippedByUser ? 'Manter faixa' : 'Pular esta faixa' }}
+            </button>
+
+            @if (match.skippedByUser) {
+              <p>Esta faixa será pulada por sua escolha.</p>
+            }
+
             @if (match.alreadyPresent) {
               <small>Já presente no destino — não será adicionada novamente.</small>
             }
 
             @if (match.reviewOptions.length > 1) {
-              <fieldset class="review-options" [disabled]="loading()">
+              <fieldset class="review-options" [disabled]="loading() || match.skippedByUser">
                 <legend>Escolha uma versão de {{ match.sourceTitle }}</legend>
 
                 @for (option of match.reviewOptions; track option.destinationTrackId) {
@@ -301,6 +319,10 @@
         <div>
           <dt>Puladas entre encontradas</dt>
           <dd>{{ result.skippedCount }}</dd>
+        </div>
+        <div>
+          <dt>Puladas por você</dt>
+          <dd>{{ result.skippedByUserCount }}</dd>
         </div>
         <div>
           <dt>Sem correspondência</dt>

@@ -31,10 +31,11 @@ export class PlaylistPreviewApi {
   }
 
   confirmPreview(previewId: string, selections: Readonly<Record<number, string>> = {},
+                 skippedPositions: readonly number [] = [],
                  ): Observable<PlaylistConversionResponse> {
-    const body = Object.keys(selections).length > 0
-      ? { selections }
-      : null;
+    const hasDecisions = Object.keys(selections).length > 0 || skippedPositions.length > 0;
+
+    const body = hasDecisions ? { selections, skippedPositions } : null;
 
     return this.http.post<PlaylistConversionResponse>(
       `/api/conversions/previews/${encodeURIComponent(previewId)}/confirm`,

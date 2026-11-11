@@ -115,6 +115,7 @@ describe('PlaylistPreviewApi', () => {
       skippedCount: 0,
       notFoundCount: 0,
       notFound: [],
+      skippedByUserCount: 0,
     };
 
     const responsePromise = firstValueFrom(api.confirmPreview(previewId));
@@ -145,6 +146,7 @@ describe('PlaylistPreviewApi', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
       selections: { '1': 'video-B' },
+      skippedPositions: [],
     });
 
     request.flush({
@@ -156,6 +158,7 @@ describe('PlaylistPreviewApi', () => {
       skippedCount: 0,
       notFoundCount: 0,
       notFound: [],
+      skippedByUserCount: 0,
     });
 
     expect((await responsePromise).insertedCount).toBe(1);

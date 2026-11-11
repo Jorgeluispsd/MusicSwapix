@@ -8,4 +8,5 @@ export interface PlaylistConversionResponse {
   skippedCount: number;
   notFoundCount: number;
   notFound: UnmatchedTrackResponse[];
+  skippedByUserCount: number;
 }

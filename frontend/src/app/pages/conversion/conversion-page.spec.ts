@@ -534,6 +534,7 @@ describe('ConversionPage', () => {
     const rejected = httpTesting.expectOne(url);
     expect(rejected.request.body).toEqual({
       selections: { 1: 'video-B' },
+      skippedPositions: [],
     });
 
     rejected.flush(
@@ -551,6 +552,7 @@ describe('ConversionPage', () => {
     const corrected = httpTesting.expectOne(url);
     expect(corrected.request.body).toEqual({
       selections: { 1: 'video-A' },
+      skippedPositions: [],
     });
 
     corrected.flush({
@@ -561,9 +563,67 @@ describe('ConversionPage', () => {
       skippedCount: 0,
       notFoundCount: 0,
       notFound: [],
+      skippedByUserCount: 0,
     });
 
     expect(component.preview()).toBeNull();
     expect(component.conversionResult()?.insertedCount).toBe(1);
+  });
+
+  it('shouldSkipAndRestoreTrackBeforeConfirmation', () => {
+    const component = createPageWithPreview();
+
+    expect(component.reviewSummary().newTrackCount).toBe(1);
+
+    component.toggleSkippedTrack(0);
+
+    expect(component.skippedPositions()).toEqual([0]);
+    expect(component.reviewSummary().newTrackCount).toBe(0);
+    expect(component.reviewedMatches()[0].skippedByUser).toBe(true);
+    expect(component.canConfirm()).toBe(false);
+
+    component.toggleSkippedTrack(0);
+
+    expect(component.skippedPositions()).toEqual([]);
+    expect(component.reviewSummary().newTrackCount).toBe(1);
+    expect(component.canConfirm()).toBe(true);
+  });
+
+  it('shouldSendSkippedPositionsWhenConfirmingExistingPlaylist', () => {
+    const component = createPageWithPreview();
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.preview.set({
+      ...component.preview()!,
+      destinationPlaylistId: 'PL-existing',
+    });
+
+    const previewId = component.preview()!.previewId;
+
+    component.toggleSkippedTrack(0);
+    component.confirmPreview();
+
+    const request = httpTesting.expectOne(
+      `/api/conversions/previews/${previewId}/confirm`,
+    );
+
+    expect(request.request.body).toEqual({
+      selections: {},
+      skippedPositions: [0],
+    });
+
+    request.flush({
+      sourcePlaylistId: 'source-playlist',
+      destinationPlaylistId: 'PL-existing',
+      destinationPlaylistUrl: 'https://www.youtube.com/playlist?list=PL-existing',
+      insertedCount: 0,
+      skippedCount: 0,
+      skippedByUserCount: 1,
+      notFoundCount: 0,
+      notFound: [],
+    });
+
+    expect(component.conversionResult()?.skippedByUserCount).toBe(1);
+    expect(component.skippedPositions()).toEqual([]);
   });
 });
