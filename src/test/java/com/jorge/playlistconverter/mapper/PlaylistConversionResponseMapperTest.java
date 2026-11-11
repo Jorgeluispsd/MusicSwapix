@@ -45,7 +45,7 @@ class PlaylistConversionResponseMapperTest {
                                 new UnmatchedTrackResponse("source-C",
                                         "Song source-C", "Artist"),
                                 new UnmatchedTrackResponse("source-D",
-                                        "Song source-D", "Artist")));
+                                        "Song source-D", "Artist")), 0);
 
         assertEquals(expected, response);
     }
@@ -69,6 +69,23 @@ class PlaylistConversionResponseMapperTest {
     void shouldRejectNullConversionResult() {
         assertThrows(NullPointerException.class,
                 () -> mapper.toResponse(null));
+    }
+
+    @Test
+    void shouldReportUserSkippedTrackSeparatelyFromUnmatchedTrack() {
+        ConversionResult result = new ConversionResult(
+                "source-playlist",
+                "destination-playlist",
+                List.of(
+                        match("source-A", "video-A").skipByUser(),
+                        match("source-B", null)),
+                0, 0);
+
+        PlaylistConversionResponse response = mapper.toResponse(result);
+
+        assertEquals(1, response.skippedByUserCount());
+        assertEquals(1, response.notFoundCount());
+        assertEquals("source-B", response.notFound().getFirst().sourceTrackId());
     }
 
     private MatchResult match(String sourceId, String videoId) {

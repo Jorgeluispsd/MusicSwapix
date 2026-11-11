@@ -8,7 +8,8 @@ public record MatchResult(
         String matchedTitle,    // título retornado pela busca, para você comparar visualmente
         double confidence,       // 0.0 a 1.0 — semelhança calculada pelo TrackMatcher
         List<TrackReviewOption> reviewOptions,
-        String artworkUrl
+        String artworkUrl,
+        boolean skippedByUser
 ) {
     public MatchResult{
         reviewOptions = List.copyOf(reviewOptions);
@@ -23,7 +24,17 @@ public record MatchResult(
         this(sourceSong, matchedId, matchedTitle, confidence, reviewOptions, null);
     }
 
+    public MatchResult(Song sourceSong, String matchedId, String matchedTitle,
+            double confidence, List<TrackReviewOption> reviewOptions, String artworkUrl) {
+        this(sourceSong, matchedId, matchedTitle, confidence, reviewOptions, artworkUrl, false);
+    }
+
     public boolean found() {
-        return matchedId != null;
+        return matchedId != null && !skippedByUser;
+    }
+
+    public MatchResult skipByUser() {
+        return new MatchResult(sourceSong, matchedId, matchedTitle, confidence,
+                reviewOptions, artworkUrl, true);
     }
 }

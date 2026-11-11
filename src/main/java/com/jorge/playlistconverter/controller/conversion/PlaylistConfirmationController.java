@@ -27,9 +27,9 @@ public class PlaylistConfirmationController {
     @PostMapping("/{previewId}/confirm")
     public PlaylistConversionResponse confirm(@PathVariable("previewId") UUID previewId,
                                               @Valid @RequestBody(required = false)PlaylistConfirmationRequest request){
-        ConversionResult result = request == null ?
-                confirmationService.confirm(previewId):
-                confirmationService.confirm(previewId, request.selections());
+        ConversionResult result = request == null
+                ? confirmationService.confirm(previewId)
+                : confirmationService.confirm(previewId, request.selections(), request.skippedPositions());
 
         return responseMapper.toResponse(result);
     }

@@ -30,7 +30,7 @@ public record PlaylistPreview(String sourcePlaylistId, String destinationPlaylis
 
     public List<Song> notFoundSongs() {
         return matches.stream()
-                .filter(match -> !match.found())
+                .filter(match -> !match.found() && !match.skippedByUser())
                 .map(MatchResult::sourceSong)
                 .toList();
     }

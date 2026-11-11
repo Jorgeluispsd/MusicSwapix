@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -307,7 +308,7 @@ class PlaylistConfirmationControllerTest {
 
     @Test
     void shouldForwardTrackSelectionsToConfirmationService() throws Exception {
-        when(confirmationService.confirm(PREVIEW_ID, Map.of(1, "video-B")))
+        when(confirmationService.confirm(PREVIEW_ID, Map.of(1, "video-B"), Set.of()))
                 .thenReturn(new ConversionResult(
                         "source-playlist", "destination-playlist",
                         List.of(), 0, 0));
@@ -319,12 +320,12 @@ class PlaylistConfirmationControllerTest {
                             """))
                 .andExpect(status().isOk());
 
-        verify(confirmationService).confirm(PREVIEW_ID, Map.of(1, "video-B"));
+        verify(confirmationService).confirm(PREVIEW_ID, Map.of(1, "video-B"), Set.of());
     }
 
     @Test
     void shouldReturnBadRequestWhenTrackSelectionIsInvalid() throws Exception {
-        when(confirmationService.confirm(PREVIEW_ID, Map.of(1, "video-C")))
+        when(confirmationService.confirm(PREVIEW_ID, Map.of(1, "video-C"), Set.of()))
                 .thenThrow(new InvalidTrackSelectionException("Escolha inválida."));
 
         var result = mockMvc.perform(post(CONFIRM_URL)

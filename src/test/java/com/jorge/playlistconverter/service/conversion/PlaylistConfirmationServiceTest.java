@@ -205,6 +205,45 @@ class PlaylistConfirmationServiceTest {
         verifyNoInteractions(converter);
     }
 
+    @Test
+    void shouldConfirmWithoutInsertingUserSkippedTrack() {
+        StoredPlaylistPreview stored = savePreviewWithReviewOptions();
+
+        PlaylistPreview expected = new PlaylistPreview(
+                stored.preview().sourcePlaylistId(),
+                stored.preview().destinationPlaylistId(),
+                List.of(stored.preview().matches().getFirst().skipByUser()),
+                stored.preview().existingDestinationIds());
+
+        service.confirm(stored.id(), Map.of(), Set.of(0));
+
+        verify(converter).executeExistingPlaylistPreview(expected);
+        assertTrue(store.find(stored.id()).isEmpty());
+    }
+
+    @Test
+    void shouldRejectSelectingAndSkippingTheSameTrack() {
+        StoredPlaylistPreview stored = savePreviewWithReviewOptions();
+
+        assertThrows(InvalidTrackSelectionException.class,
+                () -> service.confirm(
+                        stored.id(), Map.of(0, "video-B"), Set.of(0)));
+
+        assertSame(stored, store.find(stored.id()).orElseThrow());
+        verifyNoInteractions(converter);
+    }
+
+    @Test
+    void shouldRejectUnknownSkippedPositionWithoutConsumingPreview() {
+        StoredPlaylistPreview stored = savePreviewWithReviewOptions();
+
+        assertThrows(InvalidTrackSelectionException.class,
+                () -> service.confirm(stored.id(), Map.of(), Set.of(99)));
+
+        assertSame(stored, store.find(stored.id()).orElseThrow());
+        verifyNoInteractions(converter);
+    }
+
     private StoredPlaylistPreview savePreviewWithReviewOptions() {
         Song source = new Song("source-A", "Song A", "Artist", 200_000);
         Song suggested = new Song("video-A", "Song A", "Artist", 202_000);
