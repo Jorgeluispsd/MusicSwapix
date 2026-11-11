@@ -1,5 +1,8 @@
 <div class="ambient" aria-hidden="true">
-  <img src="/images/listener-red.png" alt="" />
+  <img [src]="theme() === 'spotify'
+    ? '/images/listener-green.png'
+    : '/images/listener-red.png'"
+         alt=""/>
 </div>
 
 <header class="app-header">
@@ -43,6 +46,24 @@
 
     <div class="accent-line" aria-hidden="true"></div>
   </section>
+
+  <div class="theme-options" role="group" aria-label="Tema visual">
+    <button
+      type="button"
+      [attr.aria-pressed]="theme() === 'youtube'"
+      (click)="theme.set('youtube')"
+    >
+      Tema YouTube
+    </button>
+
+    <button
+      type="button"
+      [attr.aria-pressed]="theme() === 'spotify'"
+      (click)="theme.set('spotify')"
+    >
+      Tema Spotify
+    </button>
+  </div>
 
   <router-outlet />
 </main>

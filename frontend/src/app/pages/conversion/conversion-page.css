@@ -141,7 +141,7 @@ small {
 
 .destination-options button[aria-pressed="true"] {
   border-color: var(--color-accent);
-  background: rgb(255 53 71 / 12%);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
 .review-options {
