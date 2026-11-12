@@ -23,6 +23,8 @@
         <!-- Atualizações de segurança das dependências gerenciadas -->
         <tomcat.version>11.0.27</tomcat.version>
         <jackson-bom.version>3.1.8</jackson-bom.version>
+        <postgresql.version>42.7.14</postgresql.version>
+        <hibernate-validator.version>9.1.5.Final</hibernate-validator.version>
         <argLine/>
     </properties>
 
@@ -71,6 +73,12 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>2.2.224</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Leitura de variáveis de ambiente a partir de um arquivo .env local (credenciais fora do código) -->
