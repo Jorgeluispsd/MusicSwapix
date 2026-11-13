@@ -6,11 +6,13 @@ import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.sql.SQLException;
 
 @Slf4j
 @Configuration
+@Profile("h2")
 public class H2ConsoleConfig {
 
     @Bean(initMethod = "start", destroyMethod = "stop")

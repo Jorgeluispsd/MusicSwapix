@@ -83,7 +83,7 @@ public class H2SyncStateStoreTest {
     void shouldRecoverExistingJobAfterDuplicateInsert() {
         long existingId = store.createSyncJob(SOURCE, DESTINATION, DIRECTION);
 
-        H2SyncStateStore observedStore = spy(store);
+        JdbcSyncStateStore observedStore = spy(store);
 
         doReturn(OptionalLong.empty()).doCallRealMethod()
                 .when(observedStore).findSyncJob(SOURCE, DESTINATION, DIRECTION);
@@ -101,7 +101,7 @@ public class H2SyncStateStoreTest {
 
     @Test
     void shouldPropagateNonDuplicateSqlFailure() {
-        H2SyncStateStore observedStore = spy(store);
+        JdbcSyncStateStore observedStore = spy(store);
 
         SyncStateStorageException result = assertThrows(
                 SyncStateStorageException.class,
