@@ -6,11 +6,6 @@ import java.util.function.Consumer;
 
 import java.util.List;
 
-/**
- * Contrato comum de leitura, busca e escrita para Spotify e YouTube.
- * O PlaylistConverter da Fase 6 coordenará esses serviços com o histórico de sincronização.
- * Nem todas as operações estão implementadas nas duas plataformas; consultar seus TODOs.
- */
 public interface MusicService {
 
     // Leitura paginada já implementada em Spotify e YouTube.
@@ -30,7 +25,6 @@ public interface MusicService {
 
     void addTracks(String playlistId, List<String> trackIds, Consumer<String> onInserted);
 
-    // TODO (Fase 6): consultar o destino para checar itens presentes; complementar o histórico, sem confundir os dois conceitos.
     List<Song> getPlaylistTracksAlreadyAdded(String playlistId);
 
 
