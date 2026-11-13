@@ -26,11 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-/**
- * Leitura de playlists Spotify com Authorization Code + PKCE, paginação de 50 itens
- * e uma nova tentativa após 401. Limitações 429 preservam Retry-After sem retry automático.
- * Escrita no destino será implementada na Fase 6; busca Spotify pertence à Fase 7.
- */
 public class SpotifyMusicService implements MusicService {
 
     private static final String READ_SCOPES = "playlist-read-private playlist-read-collaborative";
