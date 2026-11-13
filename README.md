@@ -1,4 +1,4 @@
-# 🎵 Conversor de Playlists
+# MusicSwapix
 
 Ferramenta em Java para converter playlists do **Spotify para o YouTube**, com prévia antes de adicionar músicas. A conversão inversa está planejada.
 
@@ -17,13 +17,13 @@ Em desenvolvimento — construído em fases, cada uma validada antes de avançar
 - [x] Leitura de playlists do Spotify
 - [x] Busca de músicas equivalentes no YouTube
 - [x] Matching e cálculo de confiança entre faixas
-- [x] Persistência do histórico (H2) e prevenção de duplicatas
+- [x] Persistência do histórico (PostgreSQL e H2) e prevenção de duplicatas
 - [x] Leitura de playlists do YouTube
 - [x] Tratamento específico de quota YouTube e de HTTP 429 Spotify
 - [x] Conversão Spotify → YouTube para playlist nova ou existente
 - [x] API local para consultar destinos anteriores, gerar prévia, confirmar e cancelar
-- [ ] Interface básica em Angular
-- [ ] Distribuição local com PostgreSQL e Docker Compose
+- [x] Interface Angular com revisão de faixas e histórico
+- [x] PostgreSQL via Docker Compose para desenvolvimento local
 - [ ] Conversão inversa (YouTube → Spotify)
 
 ## ⚙️ Como funciona
@@ -38,7 +38,7 @@ converter/   -> análise, prévias, execução e histórico de conversões
 spotify/     -> implementação do lado Spotify
 youtube/     -> implementação do lado YouTube
 matcher/     -> lógica de similaridade para encontrar a música equivalente
-state/       -> histórico de sincronizações e controle de duplicata (H2)
+state/       -> histórico de sincronizações e controle de duplicata (PostgreSQL ou H2)
 state/database/ -> H2DatabaseInitializer e H2SyncStateStore
 state/sql/   -> SqlResourceLoader
 errors/      -> exceções por autorização, Spotify, YouTube e persistência
@@ -52,14 +52,18 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
 - Java 21 + Spring Boot
 - [spotify-web-api-java](https://github.com/spotify-web-api-java/spotify-web-api-java) — cliente para a Spotify Web API
 - [google-api-services-youtube](https://developers.google.com/youtube/v3) — cliente oficial para a YouTube Data API v3
-- H2 Database — histórico local de sincronizações e prevenção de duplicatas
+- PostgreSQL via Docker Compose — banco padrão de histórico e vínculos
+- H2 — alternativa local com o perfil h2
+- Angular e TypeScript — interface web
 - Maven
 
 ## 🚀 Como rodar localmente
 
 ### Pré-requisitos
 
-- Java 21+
+- Java 21
+- Node.js 24 e npm
+- Docker com Compose
 - Maven
 - Conta Spotify **Premium** (exigido pelo Development Mode da Spotify para acesso à API)
 - Conta Google (para gerar uma chave da YouTube Data API v3)
@@ -68,8 +72,8 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
 
 1. Clone o repositório:
    ```
-   git clone https://github.com/seu-usuario/conversor-de-playlists.git
-   cd conversor-de-playlists
+   git clone https://github.com/Jorgeluispsd/MusicSwapix.git
+   cd MusicSwapix
    ```
 
 2. Crie um app em [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) e, em *Users Management*, adicione o e-mail da conta Spotify que você vai usar para testar (obrigatório em Development Mode — limite de 5 usuários autorizados por app).
@@ -82,16 +86,31 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
    SPOTIFY_CLIENT_SECRET=
    SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/callback
    YOUTUBE_API_KEY=
+   POSTGRES_PASSWORD='senha-local-de-exemplo'
    ```
 
-5. Rode a aplicação pelo IntelliJ usando `PlaylistConverterApplication`, ou pelo Maven:
+5. Suba o PostgreSQL na raiz do projeto.
+   `powershell
+   docker compose up -d postgres
+   ``n
+6. Rode a aplicação pelo IntelliJ usando PlaylistConverterApplication, ou pelo Maven:
    ```
    mvn spring-boot:run
    ```
 
+7. Em outro terminal, instale as dependências do front e inicie o Angular.
+
+   ```powershell
+   cd frontend
+   npm.cmd ci
+   npm.cmd start
+   ```
+
+   Abra [MusicSwapix local](http://localhost:4200).
+
 Para operações que exigem autorização do YouTube, configure um cliente OAuth do tipo **App para computador** no Google Cloud e salve seu JSON em `~/.playlist-converter/google-client-secret.json`. Se o app estiver em teste, inclua a conta usada na lista de usuários de teste.
 
-A aplicação inicia a API em `127.0.0.1:8080` por padrão. Consulte o [guia da API local](docs/API.md) para testar o fluxo no Postman. O runner interativo pode ser habilitado com `playlist.converter.manual-runner.enabled=true`. A aplicação pode abrir o navegador local para autorização e reutiliza as sessões salvas quando disponíveis.
+A aplicação inicia a API em `127.0.0.1:8080` por padrão. Consulte o [guia da API local](docs/API.md) para testar o fluxo no Postman. A aplicação pode abrir o navegador local para autorização e reutiliza as sessões salvas quando disponíveis.
 
 ### Testes e banco local
 
@@ -99,13 +118,7 @@ Execute `mvn test` para rodar a suíte. Se `mvn` não estiver no PATH, pressione
 
 Os testes automatizados usam mocks e um banco H2 temporário para validar o fluxo sem acessar as APIs externas ou o banco pessoal.
 
-Os dados locais ficam em `~/.playlist-converter/`: `spotify_tokens.json` guarda a sessão e o banco usa o caminho base `data.db` (o H2 acrescenta sua extensão ao arquivo). O console H2 informa seu link nos logs da aplicação. Use a URL JDBC `jdbc:h2:~/.playlist-converter/data.db` e as mesmas credenciais usadas na criação do banco. Mantenha a aplicação rodando e execute, por exemplo:
-
-```sql
-SELECT * FROM sync_job;
-SELECT * FROM sync_run;
-SELECT * FROM synced_track;
-```
+O PostgreSQL guarda histórico e vínculos no volume `postgres_data`. Para consultar pelo DBeaver, use `127.0.0.1:5432`, banco e usuário `musicswapix`, e a senha do seu `.env`. O backend cria as tabelas ao iniciar. Para abrir o H2 local, inicie o Spring com o perfil `h2`.
 
 > ⚠️ **Nenhuma credencial deste projeto é distribuída publicamente.** Cada pessoa que for rodar o projeto precisa criar seu próprio app no Spotify e sua própria chave no Google Cloud — é assim que projetos open source que integram com APIs de terceiros funcionam. O `.env` nunca é commitado (veja `.gitignore`).
 
@@ -117,9 +130,13 @@ O acesso às playlists depende das permissões da conta, dos escopos e das regra
 
 O projeto trabalha com as quotas padrão; solicitar aumento está fora do escopo atual. Uma playlist inédita com 280 músicas pode exigir 280 pesquisas no YouTube e três janelas de quota padrão. Os detalhes e decisões estão em [docs/PROJECT_LIMITATIONS.md](docs/PROJECT_LIMITATIONS.md).
 
-Quando recebe `quotaExceeded`, o YouTube lança uma exceção específica. No Spotify, HTTP 429 preserva o prazo `Retry-After` quando positivo. A biblioteca atual não preserva o motivo estruturado `QUOTA_EXCEEDED`, portanto o projeto não consegue distinguir os dois tipos de limitação com segurança. Os serviços encerram a operação sem retornar uma lista parcial como resultado completo; espera automática e retomada serão detalhadas na Fase 8.
+Quando recebe `quotaExceeded`, o YouTube lança uma exceção específica. No Spotify, HTTP 429 preserva o prazo `Retry-After` quando positivo. A biblioteca atual não preserva o motivo estruturado `QUOTA_EXCEEDED`, portanto o projeto não consegue distinguir os dois tipos de limitação com segurança. Os serviços encerram a operação sem retornar uma lista parcial como resultado completo; espera automática e retomada ainda estão pendentes.
 
 ### Outras limitações
+
+- A conversão disponível é Spotify → YouTube. A direção inversa está planejada.
+- A busca pode omitir uma faixa existente. A prévia permite revisar alternativas disponíveis e pular faixas.
+- A prévia expira e fica em memória. Se a inserção for interrompida, confira o destino antes de tentar novamente.
 
 - O Spotify limita apps em Development Mode a 5 usuários autorizados e exige conta Premium para desenvolvimento — isso afeta quem consegue testar o projeto sem passar pelo processo de extensão de quota da Spotify.
 - O matching entre faixas é baseado em similaridade de texto (título/artista); casos como remixes, covers ou versões ao vivo podem exigir revisão manual quando a confiança do match for baixa.

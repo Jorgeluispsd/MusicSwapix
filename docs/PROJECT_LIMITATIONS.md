@@ -12,7 +12,7 @@ Decisão: trabalhar com as quotas padrão dos provedores. Solicitar aumento de q
 
 A documentação consultada informa quota padrão de 100 chamadas diárias de `search.list`, separada das 10.000 unidades diárias compartilhadas pelos demais endpoints. `playlistItems.list` custa 1 unidade por página; `playlistItems.insert` custa 50 unidades por chamada. Os limites efetivos devem ser conferidos no Google Cloud Console. A renovação diária ocorre à meia-noite do horário do Pacífico.
 
-No código atual, a leitura usa páginas de até 50 itens: ler 250 itens em cinco páginas custa 5 unidades, sem consumir as 100 pesquisas. Cada execução de `searchCandidates` faz uma pesquisa e retorna até cinco candidatos. Repetir a mesma consulta também consome quota.
+No código atual, a leitura usa páginas de até 50 itens: ler 250 itens em cinco páginas custa 5 unidades, sem consumir as 100 pesquisas. A busca pode usar uma segunda consulta com o título simplificado. Por isso, o total de buscas pode superar o número de faixas. Repetir a mesma consulta também consome quota.
 
 Caso real: playlist Spotify com 280 itens. Se cada item exigir uma pesquisa inédita no YouTube, serão necessárias 280 pesquisas e pelo menos três janelas diárias padrão (100 + 100 + 80), considerando quota integral disponível e nenhuma busca adicional. Isso não significa necessariamente 72 horas: depende do horário de renovação. A barreira está na descoberta dos equivalentes, não na leitura da origem. A criação e inserção de itens têm custos adicionais próprios.
 
@@ -32,7 +32,7 @@ A biblioteca Spotify 10.0.0 usada no projeto não preserva o motivo estruturado 
 
 ## Qualidade das correspondências
 
-A pontuação do matcher representa semelhança, não probabilidade de acerto nem garantia de identidade do áudio. Covers, remixes, versões ao vivo e diferenças de metadados podem produzir correspondências incorretas. O fluxo de revisão pelo usuário está planejado para a Fase 9.
+A pontuação do matcher representa semelhança, não probabilidade de acerto nem garantia de identidade do áudio. Covers, remixes, versões ao vivo e diferenças de metadados podem produzir correspondências incorretas. Na prévia, o usuário pode escolher entre as alternativas disponíveis ou pular a faixa.
 
 ## Fontes
 
