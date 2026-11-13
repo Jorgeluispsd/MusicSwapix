@@ -10,6 +10,8 @@ import { PlaylistDestinationApi } from '../../core/api/playlist-destination-api'
 import { PlaylistDestinationResponse } from '../../core/models/playlist-destination-response';
 import {distinctUntilChanged, filter, finalize, map, Observable, startWith, takeUntil,} from 'rxjs';
 
+import { applyReviewSelections, summarizeReviewedTracks } from './track-review';
+
 type DestinationMode = 'new' | 'existing';
 
 @Component({
@@ -36,59 +38,17 @@ export class ConversionPage {
 
   private readonly reviewSelections = signal<Readonly<Record<number, string>>>({});
 
-  readonly reviewedMatches = computed(() =>{
-    const selections = this.reviewSelections();
-    const skipped = this.skippedPositions();
-
-    return (this.preview()?.matches ?? []).map((match) => {
-      const selected = match.reviewOptions.find(
-        (option) => option.destinationTrackId === selections[match.trackPosition],
-      );
-
-      const current = selected
-        ? {
-          ...match,
-          destinationTrackId: selected.destinationTrackId,
-          destinationTitle: selected.destinationTitle,
-          artworkUrl: selected.artworkUrl,
-          confidence: selected.confidence,
-          alreadyPresent: selected.alreadyPresent,
-        }
-        : match;
-
-      return {
-        ...current,
-        skippedByUser: skipped.includes(match.trackPosition),
-      };
-    });
-  });
+  readonly reviewedMatches = computed(() => applyReviewSelections(
+    this.preview()?.matches ?? [],
+    this.reviewSelections(),
+    this.skippedPositions(),
+  ));
 
   readonly reviewSummary = computed(() => {
-    const stored = this.preview();
+    const hasEdits = Object.keys(this.reviewSelections()).length > 0
+      || this.skippedPositions().length > 0;
 
-    if (!stored) {
-      return { alreadyPresent: 0, newTrackCount: 0 };
-    }
-
-    if (Object.keys(this.reviewSelections()).length === 0 && this.skippedPositions().length === 0) {
-      return {
-        alreadyPresent: stored.alreadyPresent,
-        newTrackCount: stored.newTrackCount,
-      };
-    }
-
-    const matches = this.reviewedMatches().filter(
-      (match) => !match.skippedByUser);
-    const newIds = new Set(
-      matches
-        .filter((match) => !match.alreadyPresent)
-        .map((match) => match.destinationTrackId),
-    );
-
-    return {
-      alreadyPresent: matches.filter((match) => match.alreadyPresent).length,
-      newTrackCount: newIds.size,
-    };
+    return summarizeReviewedTracks(this.preview(), this.reviewedMatches(), hasEdits);
   });
 
   readonly previewExpired = signal(false);
