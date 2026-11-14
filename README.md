@@ -89,14 +89,24 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
    POSTGRES_PASSWORD='senha-local-de-exemplo'
    ```
 
-5. Suba o PostgreSQL na raiz do projeto.
-   `powershell
+5. No Windows, abra o Docker Desktop e aguarde o motor iniciar. No terminal, na raiz do clone (a pasta que contém o `docker-compose.yaml` e o `.env`), execute:
+
+   ```powershell
    docker compose up -d postgres
-   ``n
-6. Rode a aplicação pelo IntelliJ usando PlaylistConverterApplication, ou pelo Maven:
+   docker compose ps
    ```
+
+   O PostgreSQL deve aparecer como `Up`. Se a porta `5432` já estiver ocupada por outro contêiner, pare-o antes de subir o banco deste clone. O PostgreSQL aplica a senha do `.env` ao inicializar um volume novo. Para um banco já inicializado, use a senha que está configurada nele.
+
+6. No IntelliJ, abra diretamente a pasta clonada que contém o `pom.xml`. Aguarde a importação do Maven e selecione **Java 21** em **File → Project Structure → Project SDK**. Rode o método `main` de `PlaylistConverterApplication` com o diretório de trabalho apontando para a raiz do clone.
+
+   Se você tem o Maven no PATH, também pode rodar da raiz pelo terminal:
+
+   ```powershell
    mvn spring-boot:run
    ```
+
+   Se o terminal informar que `mvn` não é reconhecido, use o botão **Run** do IntelliJ ou pressione **Ctrl duas vezes** no IntelliJ e execute `mvn spring-boot:run` pelo **Run Anything**.
 
 7. Em outro terminal, instale as dependências do front e inicie o Angular.
 
