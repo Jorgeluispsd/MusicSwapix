@@ -3,10 +3,7 @@ package com.jorge.playlistconverter.spotify;
 
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.errors.OperationInterruptedException;
-import com.jorge.playlistconverter.errors.spotify.SpotifyAuthenticationException;
-import com.jorge.playlistconverter.errors.spotify.SpotifyPlaylistReadException;
-import com.jorge.playlistconverter.errors.spotify.SpotifyRequestLimitException;
-import com.jorge.playlistconverter.errors.spotify.SpotifySearchException;
+import com.jorge.playlistconverter.errors.spotify.*;
 import com.jorge.playlistconverter.model.Song;
 import com.jorge.playlistconverter.service.MusicService;
 import com.jorge.playlistconverter.spotify.authorization.SpotifyAuthService;
@@ -15,6 +12,7 @@ import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 import se.michaelthelin.spotify.exceptions.detailed.TooManyRequestsException;
 import se.michaelthelin.spotify.model_objects.IPlaylistItem;
+import se.michaelthelin.spotify.model_objects.specification.Playlist;
 import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.exceptions.detailed.ForbiddenException;
@@ -30,6 +28,7 @@ import java.util.function.Consumer;
 public class SpotifyMusicService implements MusicService {
 
     private static final String READ_SCOPES = "playlist-read-private playlist-read-collaborative";
+    private static final String WRITE_SCOPES = READ_SCOPES + " playlist-modify-private playlist-modify-public";
 
     private final SpotifyAuthService spotifyAuthService;
 
@@ -243,8 +242,52 @@ public class SpotifyMusicService implements MusicService {
 
     @Override
     public String createPlaylist(String name, PlaylistVisibility visibility) {
-        // TODO (Fase 6): garantir escopo de escrita, criar playlist na conta autorizada e retornar o ID.
-        throw new UnsupportedOperationException("A criação de playlists no Spotify ainda não foi implementada.");
+        if (name == null || name.isBlank()){
+            throw new IllegalArgumentException("Informe o nome da playlist.");
+        }
+
+        boolean publicPlaylist = toSpotifyPublicFlag(visibility);
+
+        try {
+            spotifyAuthService.ensureAuthenticated(WRITE_SCOPES);
+
+            Playlist playlist = spotifyAuthService.getSpotifyApi().createPlaylist(name.strip())
+                    .public_(publicPlaylist).build().execute();
+
+            if (playlist == null || playlist.getId() == null || playlist.getId().isBlank()){
+                throw new SpotifyPlaylistCreationException("O Spotify não retornou o ID da playlist criada.", null);
+            }
+
+            return playlist.getId();
+
+        }catch (InterruptedException e){
+            Thread.currentThread().interrupt();
+            throw new OperationInterruptedException("Criação da playlist Spotify interrompida.", e);
+
+        }catch (NoSuchAlgorithmException e){
+            throw new SpotifyAuthenticationException("Não foi possível gerar o desafio PKCE do Spotify.", e);
+
+        }catch (TooManyRequestsException e){
+            Integer retryAfter = e.getRetryAfter() > 0 ? e.getRetryAfter() : null;
+            throw new SpotifyRequestLimitException(
+                    "Spotify limitou as requisições durante a criação da playlist.", retryAfter, e);
+
+        }catch (IOException | SpotifyWebApiException | ParseException e){
+            throw new SpotifyPlaylistCreationException(
+                    "Não foi possível criar a playlist no Spotify.", e);
+        }
+    }
+
+    private boolean toSpotifyPublicFlag(PlaylistVisibility visibility){
+        if (visibility == null){
+            throw new IllegalArgumentException("Informe a visibilidade da playlist.");
+        }
+
+        return switch (visibility){
+            case PRIVATE -> false;
+            case PUBLIC -> true;
+            case UNLISTED -> throw new IllegalArgumentException("O Spotify aceita playlists privadas ou públicas.");
+        };
     }
 
     @Override
