@@ -12,6 +12,8 @@ import se.michaelthelin.spotify.requests.data.playlists.GetPlaylistItemsRequest;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import com.jorge.playlistconverter.model.Song;
+import java.util.List;
 
 class SpotifyMusicServiceTest {
 
@@ -73,6 +75,23 @@ class SpotifyMusicServiceTest {
         TooManyRequestsException original = new TooManyRequestsException("Limite simulado");
 
         assertRequestLimit(original, null);
+    }
+
+    @Test
+    void shouldReusePlaylistReadingToFindTracksAlreadyInDestination() {
+        SpotifyMusicService service = spy(
+                new SpotifyMusicService(mock(SpotifyAuthService.class))
+        );
+        List<Song> destinationTracks = List.of(
+                new Song("spotify-track", "Nightcall", "Kavinsky", 258_000)
+        );
+        doReturn(destinationTracks).when(service).getPlaylistTracks("destination-playlist");
+
+        assertEquals(
+                destinationTracks,
+                service.getPlaylistTracksAlreadyAdded("destination-playlist")
+        );
+        verify(service).getPlaylistTracks("destination-playlist");
     }
 
     private void assertRequestLimit(TooManyRequestsException original, Integer expectedRetryAfter) throws Exception{

@@ -260,7 +260,6 @@ public class SpotifyMusicService implements MusicService {
 
     @Override
     public List<Song> getPlaylistTracksAlreadyAdded(String playlistId) {
-        // TODO (Fase 6): ler itens já presentes no destino, reaproveitando getPlaylistTracks; coordenar a checagem com o histórico H2.
-        throw new UnsupportedOperationException("TODO: Fase 5");
+        return getPlaylistTracks(playlistId);
     }
 }
