@@ -1,6 +1,7 @@
 package com.jorge.playlistconverter.spotify;
 
 
+import com.google.gson.JsonArray;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.errors.OperationInterruptedException;
 import com.jorge.playlistconverter.errors.spotify.*;
@@ -23,12 +24,14 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class SpotifyMusicService implements MusicService {
 
     private static final String READ_SCOPES = "playlist-read-private playlist-read-collaborative";
     private static final String WRITE_SCOPES = READ_SCOPES + " playlist-modify-private playlist-modify-public";
+    private static final int MAX_TRACKS_PER_INSERTION = 100;
 
     private final SpotifyAuthService spotifyAuthService;
 
@@ -292,13 +295,67 @@ public class SpotifyMusicService implements MusicService {
 
     @Override
     public void addTracks(String playlistId, List<String> trackIds) {
-        // TODO (Fase 6): converter IDs para URIs Spotify e inserir em lotes na ordem recebida, sem retry cego de escrita.
-        throw new UnsupportedOperationException("TODO: Fase 6");
+        addTracks(playlistId, trackIds, trackId -> {});
     }
 
     @Override
     public void addTracks(String playlistId, List<String> trackIds, Consumer<String> onInserted) {
-        throw new UnsupportedOperationException("A inserção de músicas no Spotify ainda não foi implementada.");
+        if (playlistId == null || playlistId.isBlank()){
+            throw new IllegalArgumentException("Informe o ID da playlist de destino.");
+        }
+
+        Objects.requireNonNull(trackIds, "A lista de faixas deve ser informada.");
+        Objects.requireNonNull(onInserted, "A ação após a inserção deve ser informada.");
+
+        if (trackIds.stream().anyMatch(id -> id == null || id.isBlank())){
+            throw new IllegalArgumentException("Todos os IDs das faixas devem ser informados.");
+        }
+
+        if (trackIds.isEmpty()){
+            return;
+        }
+
+        try {
+            spotifyAuthService.ensureAuthenticated(WRITE_SCOPES);
+
+            for (int start = 0; start < trackIds.size(); start += MAX_TRACKS_PER_INSERTION){
+                int end = Math.min(start + MAX_TRACKS_PER_INSERTION, trackIds.size());
+                List<String> batch = trackIds.subList(start, end);
+
+                insertTrackBath(playlistId, batch);
+                batch.forEach(onInserted);
+            }
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new OperationInterruptedException(
+                    "Inserção de faixas no Spotify interrompida.", e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new SpotifyAuthenticationException(
+                    "Não foi possível gerar o desafio PKCE do Spotify.", e);
+        } catch (TooManyRequestsException e) {
+            Integer retryAfter = e.getRetryAfter() > 0 ? e.getRetryAfter() : null;
+            throw new SpotifyRequestLimitException(
+                    "Spotify limitou as requisições durante a inserção de faixas.",
+                    retryAfter, e);
+        } catch (IOException | SpotifyWebApiException | ParseException e) {
+            throw new SpotifyTrackInsertionException(
+                    "Não foi possível concluir a inserção de faixas no Spotify.", e);
+        }
+    }
+
+    private void insertTrackBath(String playlistId, List<String> trackIds) throws IOException,
+            SpotifyWebApiException, ParseException{
+        JsonArray uris = new JsonArray();
+        trackIds.forEach(id -> uris.add("spotify:track:" + id));
+
+        var snapshot = spotifyAuthService.getSpotifyApi().addItemsToPlaylist(playlistId, uris)
+                .build().execute();
+
+        if (snapshot == null || snapshot.getSnapshotId() == null || snapshot.getSnapshotId().isBlank()){
+            throw new SpotifyTrackInsertionException(
+                    "O Spotify não retornou a confirmação do lote de faixas.", null);
+        }
     }
 
     @Override
