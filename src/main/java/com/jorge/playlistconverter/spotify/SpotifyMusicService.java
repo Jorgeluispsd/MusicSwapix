@@ -6,6 +6,7 @@ import com.jorge.playlistconverter.errors.OperationInterruptedException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyAuthenticationException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyPlaylistReadException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyRequestLimitException;
+import com.jorge.playlistconverter.errors.spotify.SpotifySearchException;
 import com.jorge.playlistconverter.model.Song;
 import com.jorge.playlistconverter.service.MusicService;
 import com.jorge.playlistconverter.spotify.authorization.SpotifyAuthService;
@@ -168,8 +169,71 @@ public class SpotifyMusicService implements MusicService {
 
     @Override
     public List<Song> searchCandidates(Song sourceSong) {
-        // TODO (Fase 7): buscar candidatos Spotify por título/artista, mapear para Song e tratar limites; matching permanece no TrackMatcher.
-        throw new UnsupportedOperationException("TODO: Fase 7 (conversão inversa)");
+        String query = (sourceSong.title() + " " + sourceSong.artist()).strip();
+
+        try {
+            spotifyAuthService.ensureAuthenticated(READ_SCOPES);
+            return requestTrackCandidates(query);
+
+        }catch (InterruptedException e){
+            Thread.currentThread().interrupt();
+            throw new OperationInterruptedException("Busca no Spotify interrompida.", e);
+
+        }catch (NoSuchAlgorithmException e){
+            throw new SpotifyAuthenticationException("Não foi possível gerar o desafio PKCE do Spotify.", e);
+
+        }catch (TooManyRequestsException e){
+            Integer retryAfter = e.getRetryAfter() > 0 ? e.getRetryAfter() : null;
+            throw new SpotifyRequestLimitException("Spotify limitou as buscas.", retryAfter, e);
+
+        }catch (IOException | SpotifyWebApiException | ParseException e){
+            throw new SpotifySearchException("Não foi possível buscar faixas no Spotify.", e);
+        }
+    }
+
+    private List<Song> requestTrackCandidates(String query) throws IOException, SpotifyWebApiException,
+            ParseException, NoSuchAlgorithmException, InterruptedException {
+        try {
+            return searchTracks(query);
+
+        }catch (UnauthorizedException e){
+            spotifyAuthService.invalidateAccessToken();
+            spotifyAuthService.ensureAuthenticated(READ_SCOPES);
+        }
+
+        return searchTracks(query);
+    }
+
+    private List<Song> searchTracks(String query) throws IOException, SpotifyWebApiException, ParseException{
+        Track[] tracks = spotifyAuthService.getSpotifyApi()
+                .searchTracks(query).limit(5).build().execute().getItems();
+
+        if (tracks == null){
+            return List.of();
+        }
+
+        List<Song> candidates = new ArrayList<>();
+
+        for (Track track : tracks){
+            if (track == null || track.getId() == null || track.getId().isBlank()){
+                continue;
+            }
+
+            var artists = track.getArtists();
+            String artist = artists == null || artists.length == 0 ? "" : artists[0].getName();
+
+            Integer durationMs = track.getDurationMs();
+
+            var album = track.getAlbum();
+            var imagens = album == null ? null : album.getImages();
+
+            String artworkUrl = imagens == null || imagens.length == 0 ? null : imagens[0].getUrl();
+
+            candidates.add(new Song(track.getId(), track.getName(), artist,
+                    durationMs == null ? 0 : durationMs, artworkUrl));
+        }
+
+        return candidates;
     }
 
     @Override
