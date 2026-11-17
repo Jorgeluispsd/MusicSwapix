@@ -3,6 +3,7 @@ package com.jorge.playlistconverter.controller.conversion;
 import com.jorge.playlistconverter.converter.preview.PlaylistPreview;
 import com.jorge.playlistconverter.converter.preview.StoredPlaylistPreview;
 import com.jorge.playlistconverter.dto.response.PlaylistPreviewResponse;
+import com.jorge.playlistconverter.enums.ConversionDirection;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.mapper.PlaylistPreviewResponseMapper;
 import com.jorge.playlistconverter.service.conversion.PlaylistPreviewService;
@@ -99,7 +100,7 @@ class PlaylistPreviewControllerTest {
                 """;
 
         var result = mockMvc.perform(
-                        post("/api/conversions/previews/new")
+                        post("/api/conversions/previews/spotify-to-youtube/new")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json))
                 .andExpect(status().isOk())
@@ -141,7 +142,7 @@ class PlaylistPreviewControllerTest {
                 }
                 """;
 
-        var result = mockMvc.perform(post("/api/conversions/previews/existing")
+        var result = mockMvc.perform(post("/api/conversions/previews/spotify-to-youtube/existing")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json)).andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(
@@ -172,14 +173,14 @@ class PlaylistPreviewControllerTest {
             }
             """;
 
-        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/new",
+        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/spotify-to-youtube/new",
                 json);
 
         assertEquals(400, response.status());
         assertEquals("VALIDATION_ERROR", response.code());
         assertEquals("Existem campos inválidos na requisição.",
                 response.message());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
 
         assertEquals(List.of(new FieldValidationErrorResponse(
                         "sourcePlaylist",
@@ -196,11 +197,12 @@ class PlaylistPreviewControllerTest {
             }
             """;
 
-        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/existing", json);
+        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/spotify-to-youtube/existing",
+                json);
 
         assertEquals(400, response.status());
         assertEquals("VALIDATION_ERROR", response.code());
-        assertEquals("/api/conversions/previews/existing", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/existing", response.path());
 
         assertEquals(List.of(new FieldValidationErrorResponse(
                         "destinationPlaylist",
@@ -217,26 +219,26 @@ class PlaylistPreviewControllerTest {
             }
             """;
 
-        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/new", json);
+        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/spotify-to-youtube/new", json);
 
         assertEquals(400, response.status());
         assertEquals("INVALID_REQUEST_BODY", response.code());
         assertEquals(
                 "O corpo JSON está ausente, malformado ou contém um valor inválido.",
                 response.message());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
         assertTrue(response.fieldErrors().isEmpty());
     }
 
     @Test
     void shouldRejectMalformedJsonBeforePreparingPreview() throws Exception {
-        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/new", "{");
+        ApiErrorResponse response = submitInvalidRequest("/api/conversions/previews/spotify-to-youtube/new", "{");
 
         assertEquals(400, response.status());
         assertEquals("INVALID_REQUEST_BODY", response.code());
         assertEquals("O corpo JSON está ausente, malformado ou contém um valor inválido.",
                 response.message());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
         assertTrue(response.fieldErrors().isEmpty());
     }
 
@@ -256,7 +258,7 @@ class PlaylistPreviewControllerTest {
             }
             """;
 
-        var result = mockMvc.perform(post("/api/conversions/previews/new")
+        var result = mockMvc.perform(post("/api/conversions/previews/spotify-to-youtube/new")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json))
                 .andExpect(status().isBadRequest())
@@ -271,7 +273,7 @@ class PlaylistPreviewControllerTest {
         assertEquals("INVALID_PLAYLIST_INPUT", response.code());
         assertEquals("Informe um link ou ID válido para a plataforma da playlist.",
                 response.message());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
         assertTrue(response.fieldErrors().isEmpty());
         assertFalse(body.contains(original.getMessage()));
 
@@ -296,7 +298,7 @@ class PlaylistPreviewControllerTest {
             }
             """;
 
-        var result = mockMvc.perform(post("/api/conversions/previews/existing")
+        var result = mockMvc.perform(post("/api/conversions/previews/spotify-to-youtube/existing")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json))
                 .andExpect(status().isBadRequest())
@@ -310,7 +312,7 @@ class PlaylistPreviewControllerTest {
         assertEquals("INVALID_PLAYLIST_INPUT", response.code());
         assertEquals("Informe um link ou ID válido para a plataforma da playlist.",
                 response.message());
-        assertEquals("/api/conversions/previews/existing", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/existing", response.path());
         assertTrue(response.fieldErrors().isEmpty());
         assertFalse(body.contains(original.getMessage()));
 
@@ -340,7 +342,7 @@ class PlaylistPreviewControllerTest {
                         + "A operação foi interrompida. "
                         + "Confira o destino antes de iniciar uma nova tentativa.",
                 response.message());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
         assertTrue(response.fieldErrors().isEmpty());
 
         assertNull(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER));
@@ -367,7 +369,7 @@ class PlaylistPreviewControllerTest {
         assertEquals("O Spotify limitou as requisições. "
                         + "Aguarde antes de iniciar uma nova tentativa.",
                 response.message());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
         assertTrue(response.fieldErrors().isEmpty());
 
         assertEquals("30",
@@ -398,7 +400,7 @@ class PlaylistPreviewControllerTest {
 
         assertEquals(429, response.status());
         assertEquals("SPOTIFY_RATE_LIMITED", response.code());
-        assertEquals("/api/conversions/previews/new", response.path());
+        assertEquals("/api/conversions/previews/spotify-to-youtube/new", response.path());
         assertTrue(response.fieldErrors().isEmpty());
 
         assertNull(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER));
@@ -417,7 +419,7 @@ class PlaylistPreviewControllerTest {
                 new NewPlaylistPreviewRequest(SOURCE_ID,
                         "Meu Rock", PlaylistVisibility.PRIVATE));
 
-        ApiErrorResponse response = submitPlatformFailure("/api/conversions/previews/new", json);
+        ApiErrorResponse response = submitPlatformFailure("/api/conversions/previews/spotify-to-youtube/new", json);
 
         assertEquals("SPOTIFY_PLAYLIST_READ_FAILED", response.code());
         assertEquals("Não foi possível concluir a leitura da playlist no Spotify.",
@@ -442,7 +444,7 @@ class PlaylistPreviewControllerTest {
         String json = jsonMapper.writeValueAsString(
                 new ExistingPlaylistPreviewRequest(SOURCE_ID, "PL_destination"));
 
-        ApiErrorResponse response = submitPlatformFailure("/api/conversions/previews/existing", json);
+        ApiErrorResponse response = submitPlatformFailure("/api/conversions/previews/spotify-to-youtube/existing", json);
 
         assertEquals("YOUTUBE_PLAYLIST_READ_FAILED", response.code());
         assertEquals("Não foi possível concluir a leitura da playlist no YouTube.",
@@ -465,7 +467,7 @@ class PlaylistPreviewControllerTest {
                 new NewPlaylistPreviewRequest(SOURCE_ID,
                         "Meu Rock", PlaylistVisibility.PRIVATE));
 
-        ApiErrorResponse response = submitPlatformFailure("/api/conversions/previews/new", json);
+        ApiErrorResponse response = submitPlatformFailure("/api/conversions/previews/spotify-to-youtube/new", json);
 
         assertEquals("YOUTUBE_SEARCH_FAILED", response.code());
         assertEquals("Não foi possível concluir a busca de músicas no YouTube.",
@@ -475,6 +477,74 @@ class PlaylistPreviewControllerTest {
                 "Meu Rock", PlaylistVisibility.PRIVATE);
 
         verifyNoMoreInteractions(previewService);
+    }
+
+    @Test
+    void shouldExposeNewSpotifyPlaylistPreview() throws Exception {
+        String sourceId = "PLyoutube1234567890";
+        var preview = new PlaylistPreview(sourceId, List.of());
+        var stored = new StoredPlaylistPreview(
+                PREVIEW_ID, preview, "Minhas favoritas", PlaylistVisibility.PRIVATE,
+                EXPIRES_AT, ConversionDirection.YOUTUBE_TO_SPOTIFY);
+
+        when(previewService.prepareNewSpotifyPlaylist(
+                sourceId, "Minhas favoritas", PlaylistVisibility.PRIVATE))
+                .thenReturn(stored);
+
+        var result = mockMvc.perform(post("/api/conversions/previews/youtube-to-spotify/new")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "sourcePlaylist": "PLyoutube1234567890",
+                              "destinationName": "Minhas favoritas"
+                            }
+                            """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var response = jsonMapper.readValue(
+                result.getResponse().getContentAsString(), PlaylistPreviewResponse.class);
+
+        assertEquals(PREVIEW_ID, response.previewId());
+        assertEquals("Minhas favoritas", response.destinationName());
+        assertEquals(PlaylistVisibility.PRIVATE, response.visibility());
+
+        verify(previewService).prepareNewSpotifyPlaylist(
+                sourceId, "Minhas favoritas", PlaylistVisibility.PRIVATE);
+    }
+
+    @Test
+    void shouldExposeExistingSpotifyPlaylistPreview() throws Exception {
+        String sourceId = "PLyoutube1234567890";
+        String destinationId = "37i9dQZF1DXcBWIGoYBM5M";
+        var preview = new PlaylistPreview(sourceId, destinationId, List.of(), Set.of());
+        var stored = new StoredPlaylistPreview(
+                PREVIEW_ID, preview, null, null,
+                EXPIRES_AT, ConversionDirection.YOUTUBE_TO_SPOTIFY);
+
+        when(previewService.prepareExistingSpotifyPlaylist(sourceId, destinationId))
+                .thenReturn(stored);
+
+        var result = mockMvc.perform(post("/api/conversions/previews/youtube-to-spotify/existing")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "sourcePlaylist": "PLyoutube1234567890",
+                              "destinationPlaylist": "37i9dQZF1DXcBWIGoYBM5M"
+                            }
+                            """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var response = jsonMapper.readValue(
+                result.getResponse().getContentAsString(), PlaylistPreviewResponse.class);
+
+        assertEquals(PREVIEW_ID, response.previewId());
+        assertEquals(destinationId, response.destinationPlaylistId());
+        assertNull(response.destinationName());
+        assertNull(response.visibility());
+
+        verify(previewService).prepareExistingSpotifyPlaylist(sourceId, destinationId);
     }
 
     private ApiErrorResponse submitInvalidRequest(String path, String body) throws Exception {
@@ -501,7 +571,7 @@ class PlaylistPreviewControllerTest {
             """;
 
         var result = mockMvc.perform(
-                        post("/api/conversions/previews/new")
+                        post("/api/conversions/previews/spotify-to-youtube/new")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(json))
                 .andExpect(status().isTooManyRequests())

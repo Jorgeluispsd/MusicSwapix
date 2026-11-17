@@ -16,7 +16,7 @@ export class PlaylistPreviewApi {
     request: NewPlaylistPreviewRequest,
   ): Observable<PlaylistPreviewResponse> {
     return this.http.post<PlaylistPreviewResponse>(
-      '/api/conversions/previews/new',
+      '/api/conversions/previews/spotify-to-youtube/new',
       request,
     );
   }
@@ -25,7 +25,7 @@ export class PlaylistPreviewApi {
     request: ExistingPlaylistPreviewRequest,
   ): Observable<PlaylistPreviewResponse> {
     return this.http.post<PlaylistPreviewResponse>(
-      '/api/conversions/previews/existing',
+      '/api/conversions/previews/spotify-to-youtube/existing',
       request,
     );
   }

@@ -58,7 +58,7 @@ describe('PlaylistPreviewApi', () => {
     const responsePromise = firstValueFrom(api.prepareNewPlaylist(payload));
 
     const request = httpTesting.expectOne(
-      '/api/conversions/previews/new',
+      '/api/conversions/previews/spotify-to-youtube/new',
     );
 
     expect(request.request.method).toBe('POST');
@@ -80,7 +80,7 @@ describe('PlaylistPreviewApi', () => {
       status: 400,
       code: 'INVALID_PLAYLIST_INPUT',
       message: 'Informe um link ou ID válido para a plataforma da playlist.',
-      path: '/api/conversions/previews/new',
+      path: '/api/conversions/previews/spotify-to-youtube/new',
       fieldErrors: [],
     };
 
@@ -92,7 +92,7 @@ describe('PlaylistPreviewApi', () => {
     });
 
     const request = httpTesting.expectOne(
-      '/api/conversions/previews/new',
+      '/api/conversions/previews/spotify-to-youtube/new',
     );
 
     request.flush(backendError, {
@@ -255,7 +255,7 @@ describe('PlaylistPreviewApi', () => {
     );
 
     const request = httpTesting.expectOne(
-      '/api/conversions/previews/existing',
+      '/api/conversions/previews/spotify-to-youtube/existing',
     );
 
     expect(request.request.method).toBe('POST');

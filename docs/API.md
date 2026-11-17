@@ -1,14 +1,16 @@
 # API local de conversão
 
-Por padrão, a aplicação atende em `http://127.0.0.1:8080`. O fluxo disponível converte playlists do Spotify para o YouTube.
+Por padrão, a aplicação atende em `http://127.0.0.1:8080`. As rotas de prévia identificam a direção da conversão. A interface Angular usa atualmente Spotify → YouTube; o fluxo inverso está em integração e validação.
 
 | Método e rota | Entrada | Sucesso |
 | --- | --- | --- |
 | `GET /api/status` | Sem corpo | `200` com `{"status":"UP"}` |
 | `GET /api/conversions/destinations` | Parâmetro `sourcePlaylist` com link ou ID do Spotify | `200` com uma lista de `destinationPlaylistId` |
-| `POST /api/conversions/previews/new` | JSON com `sourcePlaylist`, `destinationName` e `visibility` opcional | `200` com a prévia |
-| `POST /api/conversions/previews/existing` | JSON com `sourcePlaylist` e `destinationPlaylist` | `200` com a prévia |
-| `POST /api/conversions/previews/{previewId}/confirm` | UUID devolvido na prévia, sem corpo | `200` com o resultado e `destinationPlaylistUrl` |
+| `POST /api/conversions/previews/spotify-to-youtube/new` | JSON com `sourcePlaylist`, `destinationName` e `visibility` opcional | `200` com a prévia |
+| `POST /api/conversions/previews/spotify-to-youtube/existing` | JSON com `sourcePlaylist` e `destinationPlaylist` | `200` com a prévia |
+| `POST /api/conversions/previews/youtube-to-spotify/new` | Origem YouTube, nome e visibilidade do novo destino Spotify | `200` com a prévia |
+| `POST /api/conversions/previews/youtube-to-spotify/existing` | Origem YouTube e destino Spotify existente | `200` com a prévia |
+| `POST /api/conversions/previews/{previewId}/confirm` | UUID da prévia; corpo opcional com `selections` e `skippedPositions` | `200` com o resultado e `destinationPlaylistUrl` |
 | `DELETE /api/conversions/previews/{previewId}` | UUID devolvido na prévia, sem corpo | `204` sem corpo, inclusive para uma prévia já indisponível |
 
 ## Testar no Postman
@@ -41,6 +43,31 @@ Para usar um destino existente:
 
 Gerar a prévia consulta as plataformas quando necessário. Confirmar autoriza a escrita. Cancelar descarta a prévia pendente e uma confirmação posterior recebe `404`. Uma conversão que já começou segue seu fluxo.
 
+## Prévia YouTube → Spotify
+
+Para criar uma playlist no Spotify, envie para `POST /api/conversions/previews/youtube-to-spotify/new`:
+
+```json
+{
+  "sourcePlaylist": "LINK_OU_ID_DO_YOUTUBE",
+  "destinationName": "Minha playlist convertida",
+  "visibility": "PRIVATE"
+}
+```
+
+Para o Spotify, escolha `PRIVATE` ou `PUBLIC`. A opção `UNLISTED` é recusada. O padrão é `PRIVATE`.
+
+Para usar uma playlist existente no Spotify, envie para `POST /api/conversions/previews/youtube-to-spotify/existing`:
+
+```json
+{
+  "sourcePlaylist": "LINK_OU_ID_DO_YOUTUBE",
+  "destinationPlaylist": "LINK_OU_ID_DO_SPOTIFY"
+}
+```
+
+A confirmação e o cancelamento usam as mesmas rotas nos dois sentidos. A direção fica guardada no servidor junto com o ID da prévia. A resposta de confirmação ainda está em ajuste para gerar o link do Spotify no fluxo inverso.
+
 ## Respostas de erro
 
 Para os erros tratados, a API devolve `status`, `code`, `message`, `path` e `fieldErrors`. Use `code` para identificar o caso na interface.
@@ -57,4 +84,4 @@ Para os erros tratados, a API devolve `status`, `code`, `message`, `path` e `fie
 | `502` | `SPOTIFY_PLAYLIST_READ_FAILED`, `YOUTUBE_PLAYLIST_READ_FAILED`, `YOUTUBE_SEARCH_FAILED`, `YOUTUBE_PLAYLIST_CREATION_FAILED`, `YOUTUBE_TRACK_INSERTION_FAILED` | Falha em uma operação da plataforma |
 | `504` | `AUTHORIZATION_TIMEOUT` | O prazo para autorizar acabou |
 
-Se a confirmação falhar durante a escrita ou o registro do histórico, confira a playlist no YouTube antes de gerar outra prévia. Parte da escrita pode ter sido concluída.
+Se a confirmação falhar durante a escrita ou o registro do histórico, confira a playlist na plataforma de destino antes de gerar outra prévia. Parte da escrita pode ter sido concluída.

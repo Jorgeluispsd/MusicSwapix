@@ -27,7 +27,7 @@ public class PlaylistPreviewController {
         this.responseMapper = Objects.requireNonNull(responseMapper);
     }
 
-    @PostMapping("/new")
+    @PostMapping("/spotify-to-youtube/new")
     public PlaylistPreviewResponse previewNewPlaylist(@Valid @RequestBody NewPlaylistPreviewRequest request){
         StoredPlaylistPreview stored = previewService.prepareNewPlaylist(request.sourcePlaylist(),
                 request.destinationName(), request.visibility());
@@ -35,9 +35,26 @@ public class PlaylistPreviewController {
         return responseMapper.toResponse(stored);
     }
 
-    @PostMapping("/existing")
+    @PostMapping("/spotify-to-youtube/existing")
     public PlaylistPreviewResponse previewExistingPlaylist(@Valid @RequestBody ExistingPlaylistPreviewRequest request){
         StoredPlaylistPreview stored = previewService.prepareExistingPlaylist(request.sourcePlaylist(),
+                request.destinationPlaylist());
+
+        return responseMapper.toResponse(stored);
+    }
+
+    @PostMapping("/youtube-to-spotify/new")
+    public PlaylistPreviewResponse previewNewSpotifyPlaylist(@Valid @RequestBody NewPlaylistPreviewRequest request){
+        StoredPlaylistPreview stored = previewService.prepareNewSpotifyPlaylist(request.sourcePlaylist(),
+                request.destinationName(), request.visibility());
+
+        return responseMapper.toResponse(stored);
+    }
+
+    @PostMapping("/youtube-to-spotify/existing")
+    public PlaylistPreviewResponse previewExistingSpotifyPlaylist(
+            @Valid @RequestBody ExistingPlaylistPreviewRequest request){
+        StoredPlaylistPreview stored = previewService.prepareExistingSpotifyPlaylist(request.sourcePlaylist(),
                 request.destinationPlaylist());
 
         return responseMapper.toResponse(stored);

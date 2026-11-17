@@ -84,7 +84,7 @@ describe('ConversionPage', () => {
     expect(component.form.controls.destinationName.touched).toBe(true);
     expect(component.loading()).toBe(false);
 
-    httpTesting.expectNone('/api/conversions/previews/new');
+    httpTesting.expectNone('/api/conversions/previews/spotify-to-youtube/new');
   });
 
   it('should prevent duplicate submission and release the form after failure', () => {
@@ -104,7 +104,7 @@ describe('ConversionPage', () => {
     expect(component.loading()).toBe(true);
     expect(component.form.disabled).toBe(true);
 
-    const request = httpTesting.expectOne('/api/conversions/previews/new');
+    const request = httpTesting.expectOne('/api/conversions/previews/spotify-to-youtube/new');
 
     expect(request.request.body).toEqual({
       sourcePlaylist: '1234567890123456789012',
@@ -190,7 +190,7 @@ describe('ConversionPage', () => {
     component.preparePreview();
 
     TestBed.inject(HttpTestingController)
-      .expectOne('/api/conversions/previews/new')
+      .expectOne('/api/conversions/previews/spotify-to-youtube/new')
       .flush({
         previewId: '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206',
         sourcePlaylistId: '1234567890123456789012',
@@ -242,7 +242,7 @@ describe('ConversionPage', () => {
     component.preparePreview();
 
     TestBed.inject(HttpTestingController)
-      .expectOne('/api/conversions/previews/new')
+      .expectOne('/api/conversions/previews/spotify-to-youtube/new')
       .flush({
         previewId: '3ebf4e4c-7ebd-4c52-b5b0-d943d4647206',
         sourcePlaylistId: '1234567890123456789012',
@@ -405,7 +405,7 @@ describe('ConversionPage', () => {
     component.preparePreview();
 
     const request = httpTesting.expectOne(
-      '/api/conversions/previews/existing',
+      '/api/conversions/previews/spotify-to-youtube/existing',
     );
 
     expect(request.request.body).toEqual({
@@ -413,7 +413,7 @@ describe('ConversionPage', () => {
       destinationPlaylist: 'PL-destination',
     });
 
-    httpTesting.expectNone('/api/conversions/previews/new');
+    httpTesting.expectNone('/api/conversions/previews/spotify-to-youtube/new');
 
     request.flush({}, {
       status: 503,
@@ -639,7 +639,7 @@ describe('ConversionPage', () => {
 
     component.preparePreview();
 
-    httpTesting.expectOne('/api/conversions/previews/new').flush(
+    httpTesting.expectOne('/api/conversions/previews/spotify-to-youtube/new').flush(
       { code: 'YOUTUBE_QUOTA_EXCEEDED' },
       {
         status: 429, statusText: 'Too Many Requests', headers: {
