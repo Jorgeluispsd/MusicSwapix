@@ -49,8 +49,8 @@ public class ConversionConfig {
     @Bean
     public NewPlaylistExecutor youtubeNewPlaylistExecutor(
             YoutubeMusicService youtubeMusicService, PlaylistConversionValidator playlistConversionValidator,
-            PlaylistDestinationRegistry spotifyToYoutubeDestinationRegistry, SyncRunTracker syncRunTracker,
-            TrackSyncRecorder trackSyncRecorder){
+            @Qualifier("spotifyToYoutubeDestinationRegistry")PlaylistDestinationRegistry spotifyToYoutubeDestinationRegistry,
+            SyncRunTracker syncRunTracker, TrackSyncRecorder trackSyncRecorder){
         return new NewPlaylistExecutor(youtubeMusicService, playlistConversionValidator,
                 spotifyToYoutubeDestinationRegistry, syncRunTracker,trackSyncRecorder);
     }
@@ -58,8 +58,8 @@ public class ConversionConfig {
     @Bean
     public ExistingPlaylistExecutor youtubeExistingPlaylistExecutor(
             YoutubeMusicService youtubeMusicService, PlaylistConversionValidator playlistConversionValidator,
-            PlaylistDestinationRegistry spotifyToYoutubeDestinationRegistry, SyncRunTracker runTracker,
-            TrackSyncRecorder trackSyncRecorder){
+            @Qualifier("spotifyToYoutubeDestinationRegistry")PlaylistDestinationRegistry spotifyToYoutubeDestinationRegistry,
+            SyncRunTracker runTracker, TrackSyncRecorder trackSyncRecorder){
         return new ExistingPlaylistExecutor(youtubeMusicService, playlistConversionValidator,
                 spotifyToYoutubeDestinationRegistry, runTracker, trackSyncRecorder);
     }
@@ -94,10 +94,9 @@ public class ConversionConfig {
             @Qualifier("youtubeToSpotifyAnalyzer") PlaylistAnalyzer analyzer,
             SpotifyMusicService spotifyMusicService,
             PlaylistConversionValidator validator,
-            SyncStateStore store,
+            @Qualifier("youtubeToSpotifyDestinationRegistry") PlaylistDestinationRegistry registry,
             SyncRunTracker runTracker,
             TrackSyncRecorder trackSyncRecorder){
-        var registry = new PlaylistDestinationRegistry(store, ConversionDirection.YOUTUBE_TO_SPOTIFY, validator);
 
         var newPlaylistExecutor = new NewPlaylistExecutor(spotifyMusicService, validator,
                 registry, runTracker, trackSyncRecorder);
@@ -107,5 +106,11 @@ public class ConversionConfig {
 
         return new PlaylistConverter(analyzer, spotifyMusicService,
                 newPlaylistExecutor, existingPlaylistExecutor, validator);
+    }
+
+    @Bean
+    public PlaylistDestinationRegistry youtubeToSpotifyDestinationRegistry(
+            SyncStateStore store, PlaylistConversionValidator validator) {
+        return new PlaylistDestinationRegistry(store, ConversionDirection.YOUTUBE_TO_SPOTIFY, validator);
     }
 }

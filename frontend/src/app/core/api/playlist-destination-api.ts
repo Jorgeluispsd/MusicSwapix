@@ -19,4 +19,13 @@ export class PlaylistDestinationApi {
       },
     );
   }
+
+  findSpotifyDestinations(
+    sourcePlaylist: string,
+  ): Observable<PlaylistDestinationResponse[]> {
+    return this.http.get<PlaylistDestinationResponse[]>(
+      '/api/conversions/destinations/youtube-to-spotify',
+      { params: { sourcePlaylist } },
+    );
+  }
 }

@@ -27,4 +27,12 @@ public class PlaylistDestinationController {
                 .map(job -> new PlaylistDestinationResponse(job.destinationPlaylistId()))
                 .toList();
     }
+
+    @GetMapping("/youtube-to-spotify")
+    public List<PlaylistDestinationResponse> findSpotifyDestinations(
+            @RequestParam(name = "sourcePlaylist", required = false) String sourcePlaylist) {
+        return destinationService.findSpotifyDestinations(sourcePlaylist).stream()
+                .map(job -> new PlaylistDestinationResponse(job.destinationPlaylistId()))
+                .toList();
+    }
 }

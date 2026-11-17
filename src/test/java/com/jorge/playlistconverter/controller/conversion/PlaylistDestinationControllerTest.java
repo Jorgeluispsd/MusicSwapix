@@ -5,6 +5,7 @@ import com.jorge.playlistconverter.dto.response.ApiErrorResponse;
 import com.jorge.playlistconverter.dto.response.PlaylistDestinationResponse;
 import com.jorge.playlistconverter.errors.http.ApiExceptionHandler;
 import com.jorge.playlistconverter.input.SpotifyPlaylistParser;
+import com.jorge.playlistconverter.input.YoutubePlaylistParser;
 import com.jorge.playlistconverter.model.SyncJob;
 import com.jorge.playlistconverter.service.conversion.PlaylistDestinationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,20 +33,44 @@ public class PlaylistDestinationControllerTest  {
     private static final String SOURCE_ID = "1234567890123456789012";
 
     private PlaylistDestinationRegistry destinationRegistry;
+    private PlaylistDestinationRegistry reverseRegistry;
     private MockMvc mockMvc;
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @BeforeEach
     void setUp() {
         destinationRegistry = mock(PlaylistDestinationRegistry.class);
+        reverseRegistry = mock(PlaylistDestinationRegistry.class);
 
         var service = new PlaylistDestinationService(
-                new SpotifyPlaylistParser(), destinationRegistry);
+                new SpotifyPlaylistParser(), destinationRegistry,
+                new YoutubePlaylistParser(), reverseRegistry);
 
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new PlaylistDestinationController(service))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
+    }
+
+    @Test
+    void shouldReturnSavedSpotifyDestinationsForYoutubeLink() throws Exception {
+        String youtubeId = "PLyoutube1234567890";
+        when(reverseRegistry.findDestinations(youtubeId)).thenReturn(List.of(
+                new SyncJob(12L, youtubeId, SOURCE_ID, "YOUTUBE_TO_SPOTIFY")));
+
+        var result = mockMvc.perform(get(DESTINATIONS_URL + "/youtube-to-spotify")
+                        .param("sourcePlaylist", "https://www.youtube.com/playlist?list=" + youtubeId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var response = jsonMapper.readValue(
+                result.getResponse().getContentAsString(), PlaylistDestinationResponse[].class);
+
+        assertArrayEquals(new PlaylistDestinationResponse[]{
+                new PlaylistDestinationResponse(SOURCE_ID)
+        }, response);
+        verify(reverseRegistry).findDestinations(youtubeId);
+        verifyNoInteractions(destinationRegistry);
     }
 
     @Test

@@ -41,8 +41,9 @@ class PlaylistPreviewConfigTest {
                         () -> converter)
                 .withBean("youtubeToSpotifyConverter", PlaylistConverter.class,
                         () -> mock(PlaylistConverter.class))
-                .withBean(
-                        PlaylistDestinationRegistry.class,
+                .withBean("spotifyToYoutubeDestinationRegistry", PlaylistDestinationRegistry.class,
+                        () -> mock(PlaylistDestinationRegistry.class))
+                .withBean("youtubeToSpotifyDestinationRegistry", PlaylistDestinationRegistry.class,
                         () -> mock(PlaylistDestinationRegistry.class))
                 .withBean(
                         SpotifyPlaylistParser.class,

@@ -13,6 +13,7 @@ import {distinctUntilChanged, filter, finalize, map, Observable, startWith, take
 import { applyReviewSelections, summarizeReviewedTracks } from './track-review';
 
 type DestinationMode = 'new' | 'existing';
+type ConversionDirection = 'spotify-to-youtube' | 'youtube-to-spotify';
 
 @Component({
   selector: 'app-conversion-page',
@@ -35,6 +36,10 @@ export class ConversionPage {
   readonly loadingDestinations = signal(false);
   readonly savedDestinations = signal<PlaylistDestinationResponse[] | null>(null);
   readonly destinationLookupError = signal('');
+  readonly direction = signal<ConversionDirection>('spotify-to-youtube');
+  readonly isSpotifyDestination = computed(() => this.direction() === 'youtube-to-spotify');
+  readonly sourcePlatform = computed(() => this.isSpotifyDestination() ? 'YouTube' : 'Spotify');
+  readonly destinationPlatform = computed(() => this.isSpotifyDestination() ? 'Spotify' : 'YouTube');
 
   private readonly reviewSelections = signal<Readonly<Record<number, string>>>({});
 
@@ -123,7 +128,11 @@ export class ConversionPage {
     this.destinationLookupError.set('');
     this.loadingDestinations.set(true);
 
-    this.destinationApi.findDestinations(source)
+    const request = this.isSpotifyDestination()
+      ? this.destinationApi.findSpotifyDestinations(source)
+      : this.destinationApi.findDestinations(source);
+
+    request
       .pipe(
         takeUntil(sourceControl.valueChanges.pipe(
           filter((value) => value.trim() !== source),
@@ -168,6 +177,25 @@ export class ConversionPage {
     playlistControl.updateValueAndValidity();
 
     this.errorMessage.set('');
+  }
+
+  selectDirection(direction: ConversionDirection): void {
+    if (this.loading() || this.loadingDestinations() || this.preview()
+      || this.conversionResult() || direction === this.direction()) {
+      return;
+    }
+
+    this.direction.set(direction);
+    this.form.controls.sourcePlaylist.reset();
+    this.form.controls.destinationPlaylist.reset();
+    this.savedDestinations.set(null);
+    this.destinationLookupError.set('');
+    this.errorMessage.set('');
+
+    const visibility = this.form.controls.visibility;
+    if (this.isSpotifyDestination() && visibility.value === 'UNLISTED') {
+      visibility.setValue('PRIVATE');
+    }
   }
 
   preparePreview(): void {
@@ -338,17 +366,25 @@ export class ConversionPage {
     const sourcePlaylist = values.sourcePlaylist.trim();
 
     if (this.destinationMode() === 'existing') {
-      return this.previewApi.prepareExistingPlaylist({
+      const request = {
         sourcePlaylist,
         destinationPlaylist: values.destinationPlaylist.trim(),
-      });
+      };
+
+      return this.isSpotifyDestination()
+        ? this.previewApi.prepareExistingSpotifyPlaylist(request)
+        : this.previewApi.prepareExistingPlaylist(request);
     }
 
-    return this.previewApi.prepareNewPlaylist({
+    const request = {
       sourcePlaylist,
       destinationName: values.destinationName.trim(),
       visibility: values.visibility,
-    });
+    };
+
+    return this.isSpotifyDestination()
+      ? this.previewApi.prepareNewSpotifyPlaylist(request)
+      : this.previewApi.prepareNewPlaylist(request);
   }
 
   selectReviewOption(trackPosition: number, videoId: string): void {

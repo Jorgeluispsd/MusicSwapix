@@ -30,6 +30,24 @@ export class PlaylistPreviewApi {
     );
   }
 
+  prepareNewSpotifyPlaylist(
+    request: NewPlaylistPreviewRequest,
+  ): Observable<PlaylistPreviewResponse> {
+    return this.http.post<PlaylistPreviewResponse>(
+      '/api/conversions/previews/youtube-to-spotify/new',
+      request,
+    );
+  }
+
+  prepareExistingSpotifyPlaylist(
+    request: ExistingPlaylistPreviewRequest,
+  ): Observable<PlaylistPreviewResponse> {
+    return this.http.post<PlaylistPreviewResponse>(
+      '/api/conversions/previews/youtube-to-spotify/existing',
+      request,
+    );
+  }
+
   confirmPreview(previewId: string, selections: Readonly<Record<number, string>> = {},
                  skippedPositions: readonly number [] = [],
                  ): Observable<PlaylistConversionResponse> {

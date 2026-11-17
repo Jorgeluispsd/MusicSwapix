@@ -736,4 +736,34 @@ describe('ConversionPage', () => {
     expect(component.form.enabled).toBe(true);
     httpTesting.expectNone((request) => request.method === 'POST');
   });
+
+  it('shouldResetUnlistedVisibilityAndRequestNewSpotifyPreview', () => {
+    const component = TestBed.createComponent(ConversionPage).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.form.controls.visibility.setValue('UNLISTED');
+    component.selectDirection('youtube-to-spotify');
+
+    expect(component.form.controls.visibility.value).toBe('PRIVATE');
+
+    component.form.patchValue({
+      sourcePlaylist: ' https://www.youtube.com/playlist?list=PLtest ',
+      destinationName: ' Minha playlist ',
+    });
+
+    component.preparePreview();
+
+    const request = httpTesting.expectOne(
+      '/api/conversions/previews/youtube-to-spotify/new',
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      sourcePlaylist: 'https://www.youtube.com/playlist?list=PLtest',
+      destinationName: 'Minha playlist',
+      visibility: 'PRIVATE',
+    });
+
+    request.flush({}, { status: 503, statusText: 'Service Unavailable' });
+  });
 });

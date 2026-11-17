@@ -15,7 +15,7 @@
     <h2 id="conversion-title">Qual playlist vamos levar?</h2>
 
     <p class="page-description">
-      Informe a origem e escolha onde suas músicas serão adicionadas no YouTube.
+      Informe a origem e escolha onde suas músicas serão adicionadas no {{ destinationPlatform() }}.
     </p>
   }
 
@@ -26,6 +26,7 @@
     [attr.aria-busy]="loading()"
     (ngSubmit)="preparePreview()"
   >
+
     <div class="destination-options" role="group" aria-label="Tipo de destino">
       <button
         id="new-destination-mode"
@@ -51,13 +52,15 @@
     </div>
 
     <div class="form-field">
-      <label for="source-playlist">Link ou ID da playlist no Spotify</label>
+      <label for="source-playlist">Link ou ID da playlist no {{ sourcePlatform() }}</label>
 
       <input
         id="source-playlist"
         type="text"
         formControlName="sourcePlaylist"
-        placeholder="https://open.spotify.com/playlist/…"
+        [placeholder]="isSpotifyDestination()
+          ? 'https://www.youtube.com/playlist?list=…'
+          : 'https://open.spotify.com/playlist/…'"
         aria-describedby="source-help source-error"
         [attr.aria-invalid]="
           form.controls.sourcePlaylist.invalid &&
@@ -108,20 +111,24 @@
         <select id="visibility" formControlName="visibility">
           <option value="PRIVATE">Privada</option>
           <option value="PUBLIC">Pública</option>
-          <option value="UNLISTED">Não listada</option>
+          @if (!isSpotifyDestination()) {
+            <option value="UNLISTED">Não listada</option>
+          }
         </select>
       </div>
     } @else {
       <div class="form-field">
         <label for="destination-playlist">
-          Link ou ID da playlist no YouTube
+          Link ou ID da playlist no {{ destinationPlatform() }}
         </label>
 
         <input
           id="destination-playlist"
           type="text"
           formControlName="destinationPlaylist"
-          placeholder="https://www.youtube.com/playlist?list=…"
+          [placeholder]="isSpotifyDestination()
+            ? 'https://open.spotify.com/playlist/…'
+            : 'https://www.youtube.com/playlist?list=…'"
           [attr.aria-invalid]="
         form.controls.destinationPlaylist.invalid &&
         form.controls.destinationPlaylist.touched
@@ -177,6 +184,7 @@
           </ul>
         }
       </div>
+
     }
 
     <button
@@ -203,7 +211,7 @@
       <h2 id="preview-title">Confira antes de converter</h2>
 
       <p class="page-description">@if (result.destinationPlaylistId) {
-        Destino: playlist existente no YouTube.
+        Destino: playlist existente no {{ destinationPlatform() }}.
       } @else {
         Nova playlist: {{ result.destinationName }}
       }

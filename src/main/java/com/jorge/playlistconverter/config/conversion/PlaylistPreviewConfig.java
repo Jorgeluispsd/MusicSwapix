@@ -70,7 +70,12 @@ public class PlaylistPreviewConfig {
     @Bean
     public PlaylistDestinationService playlistDestinationService(
             SpotifyPlaylistParser spotifyPlaylistParser,
-            PlaylistDestinationRegistry spotifyToYoutubeDestinationRegistry){
-        return new PlaylistDestinationService(spotifyPlaylistParser, spotifyToYoutubeDestinationRegistry);
+            @Qualifier("spotifyToYoutubeDestinationRegistry")
+            PlaylistDestinationRegistry spotifyToYoutubeDestinationRegistry,
+            YoutubePlaylistParser youtubePlaylistParser,
+            @Qualifier("youtubeToSpotifyDestinationRegistry")
+            PlaylistDestinationRegistry youtubeToSpotifyDestinationRegistry){
+        return new PlaylistDestinationService(spotifyPlaylistParser, spotifyToYoutubeDestinationRegistry,
+                youtubePlaylistParser, youtubeToSpotifyDestinationRegistry);
     }
 }

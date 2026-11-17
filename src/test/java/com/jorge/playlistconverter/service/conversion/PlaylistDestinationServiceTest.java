@@ -3,6 +3,7 @@ package com.jorge.playlistconverter.service.conversion;
 import com.jorge.playlistconverter.converter.history.PlaylistDestinationRegistry;
 import com.jorge.playlistconverter.errors.input.InvalidPlaylistInputException;
 import com.jorge.playlistconverter.input.SpotifyPlaylistParser;
+import com.jorge.playlistconverter.input.YoutubePlaylistParser;
 import com.jorge.playlistconverter.model.SyncJob;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,12 +25,15 @@ class PlaylistDestinationServiceTest {
     private static final String SOURCE_ID = "1234567890123456789012";
 
     private PlaylistDestinationRegistry destinationRegistry;
+    private PlaylistDestinationRegistry reverseRegistry;
     private PlaylistDestinationService service;
 
     @BeforeEach
     void setUp() {
         destinationRegistry = mock(PlaylistDestinationRegistry.class);
-        service = new PlaylistDestinationService(new SpotifyPlaylistParser(), destinationRegistry);
+        reverseRegistry = mock(PlaylistDestinationRegistry.class);
+        service = new PlaylistDestinationService(new SpotifyPlaylistParser(), destinationRegistry,
+                new YoutubePlaylistParser(), reverseRegistry);
     }
 
     @ParameterizedTest

@@ -1,8 +1,16 @@
 <div class="ambient" aria-hidden="true">
-  <img [src]="theme() === 'spotify'
-    ? '/images/listener-green.png'
-    : '/images/listener-red.png'"
-         alt=""/>
+  <img
+    src="/images/listener-red.png"
+    alt=""
+    fetchpriority="high"
+    [class.active]="theme() === 'youtube'"
+  />
+  <img
+    src="/images/listener-green.png"
+    alt=""
+    fetchpriority="low"
+    [class.active]="theme() === 'spotify'"
+  />
 </div>
 
 <header class="app-header">
@@ -32,7 +40,9 @@
 
 <main class="app-content">
   <section class="hero" aria-labelledby="hero-title">
-    <p class="eyebrow">Spotify → YouTube</p>
+    <p class="eyebrow">
+      {{ theme() === 'spotify' ? 'YouTube → Spotify' : 'Spotify → YouTube' }}
+    </p>
 
     <h1 id="hero-title">
       O mesmo som.<br />
@@ -51,7 +61,7 @@
     <button
       type="button"
       [attr.aria-pressed]="theme() === 'youtube'"
-      (click)="theme.set('youtube')"
+      (click)="selectTheme('youtube', outlet)"
     >
       Tema YouTube
     </button>
@@ -59,11 +69,11 @@
     <button
       type="button"
       [attr.aria-pressed]="theme() === 'spotify'"
-      (click)="theme.set('spotify')"
+      (click)="selectTheme('spotify', outlet)"
     >
       Tema Spotify
     </button>
   </div>
 
-  <router-outlet />
+  <router-outlet #outlet="outlet" (activate)="syncConversionDirection($event)" />
 </main>

@@ -22,6 +22,12 @@
   height: 100vh;
   object-fit: cover;
   object-position: 70% 38%;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.ambient img.active {
+  opacity: 1;
 }
 
 .ambient::after {
@@ -185,6 +191,7 @@ h1 span {
   .app-nav a {
     transition: none;
   }
+  .ambient img { transition: none; }
 }
 
 :host([data-theme="spotify"]) {
