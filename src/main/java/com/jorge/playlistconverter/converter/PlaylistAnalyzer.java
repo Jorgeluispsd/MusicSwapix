@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 
 @Slf4j
 public class PlaylistAnalyzer {
@@ -16,12 +17,19 @@ public class PlaylistAnalyzer {
     private final MusicService source;
     private final MusicService destination;
     private final TrackMatcher matcher;
+    private final UnaryOperator<Song> prepareSourceSong;
 
     public PlaylistAnalyzer(MusicService source, MusicService destination,
-                            TrackMatcher matcher) {
+                             TrackMatcher matcher){
+        this(source, destination, matcher, UnaryOperator.identity());
+    }
+
+    public PlaylistAnalyzer(MusicService source, MusicService destination,
+                            TrackMatcher matcher, UnaryOperator<Song> prepareSourceSong) {
         this.source = Objects.requireNonNull(source);
         this.destination = Objects.requireNonNull(destination);
         this.matcher = Objects.requireNonNull(matcher);
+        this.prepareSourceSong = Objects.requireNonNull(prepareSourceSong);
     }
 
     public List<MatchResult> analyze(String sourcePlaylistId) {
@@ -38,7 +46,11 @@ public class PlaylistAnalyzer {
         List<MatchResult> results = new ArrayList<>();
 
         for (Song song : songs){
-            results.add(analyzeSong(song, existingSongs));
+            Song preparedSong = prepareSourceSong.apply(song);
+            MatchResult match = analyzeSong(preparedSong, existingSongs);
+
+            results.add(new MatchResult(song, match.matchedId(), match.matchedTitle(), match.confidence(),
+                    match.reviewOptions(), match.artworkUrl(), match.skippedByUser()));
         }
 
         return List.copyOf(results);

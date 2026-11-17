@@ -85,7 +85,8 @@ public class ConversionConfig {
     public PlaylistAnalyzer youtubeToSpotifyAnalyzer(YoutubeMusicService youtubeMusicService,
                                                      SpotifyMusicService spotifyMusicService,
                                                      TrackMatcher trackMatcher){
-        return new PlaylistAnalyzer(youtubeMusicService, spotifyMusicService, trackMatcher);
+        return new PlaylistAnalyzer(youtubeMusicService, spotifyMusicService, trackMatcher,
+                YoutubeTrackMetadata::forSpotify);
     }
 
     @Bean

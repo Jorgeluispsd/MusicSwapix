@@ -22,11 +22,13 @@ class ConversionConfigTest {
 
     @Test
     void shouldReadYoutubeAndMatchSpotifyTracksInReverseAnalyzer() {
-        Song video = new Song("youtube-video", "Nightcall", "Kavinsky", 0);
-        Song track = new Song("spotify-track", "Nightcall", "Kavinsky", 258_000);
+        Song video = new Song(
+                "youtube-video", "Kanye West - I Wonder (Lyrics)", "Cherry Lu", 0);
+        Song prepared = new Song("youtube-video", "I Wonder", "Kanye West", 0);
+        Song track = new Song("spotify-track", "I Wonder", "Kanye West", 243_000);
 
         when(youtube.getPlaylistTracks("youtube-playlist")).thenReturn(List.of(video));
-        when(spotify.searchCandidates(video)).thenReturn(List.of(track));
+        when(spotify.searchCandidates(prepared)).thenReturn(List.of(track));
 
         try (var context = createContext()) {
             var analyzer = context.getBean("youtubeToSpotifyAnalyzer", PlaylistAnalyzer.class);
@@ -36,7 +38,7 @@ class ConversionConfigTest {
             assertEquals(video, match.sourceSong());
             assertEquals("spotify-track", match.matchedId());
             verify(youtube).getPlaylistTracks("youtube-playlist");
-            verify(spotify).searchCandidates(video);
+            verify(spotify).searchCandidates(prepared);
         }
     }
 
@@ -61,11 +63,12 @@ class ConversionConfigTest {
 
     @Test
     void shouldPreviewNewSpotifyPlaylistWithMatchedTrackId() {
-        Song video = new Song("youtube-video", "Nightcall", "Kavinsky", 0);
+        Song video = new Song("youtube-video", "Nightcall", "Kavinsky - Topic", 0);
+        Song prepared = new Song("youtube-video", "Nightcall", "Kavinsky", 0);
         Song track = new Song("spotify-track", "Nightcall", "Kavinsky", 258_000);
 
         when(youtube.getPlaylistTracks("youtube-playlist")).thenReturn(List.of(video));
-        when(spotify.searchCandidates(video)).thenReturn(List.of(track));
+        when(spotify.searchCandidates(prepared)).thenReturn(List.of(track));
 
         try (var context = createContext()) {
             var converter = context.getBean("youtubeToSpotifyConverter", PlaylistConverter.class);
@@ -79,7 +82,7 @@ class ConversionConfigTest {
 
     @Test
     void shouldRecognizeTrackAlreadyInSpotifyDestinationWithoutSearching() {
-        Song video = new Song("youtube-video", "Nightcall", "Kavinsky", 258_000);
+        Song video = new Song("youtube-video", "Nightcall", "Kavinsky - Topic", 258_000);
         Song track = new Song("spotify-track", "Nightcall", "Kavinsky", 258_000);
 
         when(youtube.getPlaylistTracks("youtube-playlist")).thenReturn(List.of(video));
