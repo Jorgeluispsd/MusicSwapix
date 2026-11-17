@@ -46,8 +46,10 @@ public class PlaylistPreviewConfig {
     @Bean
     public PlaylistConfirmationService playlistConfirmationService(@Qualifier("spotifyToYoutubeConverter")
                                                                        PlaylistConverter spotifyToYoutubeConverter,
+                                                                   @Qualifier("youtubeToSpotifyConverter")
+                                                                   PlaylistConverter youtubeToSpotifyConverter,
                                                                    InMemoryPlaylistPreviewStore playlistPreviewStore) {
-        return new PlaylistConfirmationService(spotifyToYoutubeConverter, playlistPreviewStore);
+        return new PlaylistConfirmationService(spotifyToYoutubeConverter, youtubeToSpotifyConverter, playlistPreviewStore);
     }
 
     @Bean

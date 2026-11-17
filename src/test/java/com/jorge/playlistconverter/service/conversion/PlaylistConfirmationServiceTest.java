@@ -5,6 +5,7 @@ import com.jorge.playlistconverter.converter.PlaylistConverter;
 import com.jorge.playlistconverter.converter.preview.InMemoryPlaylistPreviewStore;
 import com.jorge.playlistconverter.converter.preview.PlaylistPreview;
 import com.jorge.playlistconverter.converter.preview.StoredPlaylistPreview;
+import com.jorge.playlistconverter.enums.ConversionDirection;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.errors.conversion.PlaylistPreviewUnavailableException;
 import com.jorge.playlistconverter.errors.youtube.YoutubeTrackInsertionException;
@@ -35,6 +36,7 @@ class PlaylistConfirmationServiceTest {
 
     private Clock clock;
     private PlaylistConverter converter;
+    private final PlaylistConverter reverseConverter = mock(PlaylistConverter.class);
     private InMemoryPlaylistPreviewStore store;
     private PlaylistConfirmationService service;
     private PlaylistPreview newPlaylistPreview;
@@ -46,7 +48,7 @@ class PlaylistConfirmationServiceTest {
 
         converter = mock(PlaylistConverter.class);
         store = new InMemoryPlaylistPreviewStore(clock, LIFETIME);
-        service = new PlaylistConfirmationService(converter, store);
+        service = new PlaylistConfirmationService(converter, reverseConverter, store);
 
         newPlaylistPreview = new PlaylistPreview("source-playlist",
                 List.of());
@@ -241,6 +243,34 @@ class PlaylistConfirmationServiceTest {
                 () -> service.confirm(stored.id(), Map.of(), Set.of(99)));
 
         assertSame(stored, store.find(stored.id()).orElseThrow());
+        verifyNoInteractions(converter);
+    }
+
+    @Test
+    void shouldConfirmNewPlaylistUsingReverseConverter() {
+        var preview = new PlaylistPreview("youtube-playlist", java.util.List.of());
+        var stored = store.save(
+                preview, "Minhas favoritas", PlaylistVisibility.PRIVATE,
+                ConversionDirection.YOUTUBE_TO_SPOTIFY);
+
+        service.confirm(stored.id());
+
+        verify(reverseConverter).executeNewPlaylistPreview(
+                preview, "Minhas favoritas", PlaylistVisibility.PRIVATE);
+        verifyNoInteractions(converter);
+    }
+
+    @Test
+    void shouldConfirmExistingPlaylistUsingReverseConverter() {
+        var preview = new PlaylistPreview(
+                "youtube-playlist", "spotify-playlist",
+                java.util.List.of(), java.util.Set.of());
+        var stored = store.save(preview, null, null,
+                ConversionDirection.YOUTUBE_TO_SPOTIFY);
+
+        service.confirm(stored.id());
+
+        verify(reverseConverter).executeExistingPlaylistPreview(preview);
         verifyNoInteractions(converter);
     }
 

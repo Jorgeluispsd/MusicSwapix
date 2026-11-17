@@ -15,11 +15,14 @@ import java.util.Set;
 public class PlaylistConfirmationService {
 
     private final PlaylistConverter converter;
+    private final PlaylistConverter youtubeToSpotifyConverter;
     private final InMemoryPlaylistPreviewStore previewStore;
 
     public PlaylistConfirmationService(PlaylistConverter converter,
+                                       PlaylistConverter youtubeToSpotifyConverter,
                                        InMemoryPlaylistPreviewStore previewStore) {
         this.converter = Objects.requireNonNull(converter);
+        this.youtubeToSpotifyConverter = Objects.requireNonNull(youtubeToSpotifyConverter);
         this.previewStore = Objects.requireNonNull(previewStore);
     }
 
@@ -53,10 +56,15 @@ public class PlaylistConfirmationService {
     }
 
     private ConversionResult execute(StoredPlaylistPreview stored, PlaylistPreview preview) {
+        PlaylistConverter selectedConverter = switch (stored.direction()){
+            case SPOTIFY_TO_YOUTUBE -> converter;
+            case YOUTUBE_TO_SPOTIFY -> youtubeToSpotifyConverter;
+        };
+
         if (preview.destinationPlaylistId() == null){
-            return converter.executeNewPlaylistPreview(preview, stored.destinationName(), stored.visibility());
+            return selectedConverter.executeNewPlaylistPreview(preview, stored.destinationName(), stored.visibility());
         }
 
-        return converter.executeExistingPlaylistPreview(preview);
+        return selectedConverter.executeExistingPlaylistPreview(preview);
     }
 }
