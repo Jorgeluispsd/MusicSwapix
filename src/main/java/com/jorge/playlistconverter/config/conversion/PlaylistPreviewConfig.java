@@ -13,6 +13,7 @@ import com.jorge.playlistconverter.service.conversion.PlaylistCancellationServic
 import com.jorge.playlistconverter.service.conversion.PlaylistConfirmationService;
 import com.jorge.playlistconverter.service.conversion.PlaylistDestinationService;
 import com.jorge.playlistconverter.service.conversion.PlaylistPreviewService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +31,8 @@ public class PlaylistPreviewConfig {
     }
 
     @Bean
-    public PlaylistPreviewService playlistPreviewService(PlaylistConverter spotifyToYoutubeConverter,
+    public PlaylistPreviewService playlistPreviewService(@Qualifier("spotifyToYoutubeConverter")
+                                                             PlaylistConverter spotifyToYoutubeConverter,
                                                          InMemoryPlaylistPreviewStore playlistPreviewStore,
                                                          SpotifyPlaylistParser spotifyPlaylistParser,
                                                          YoutubePlaylistParser youtubePlaylistParser,
@@ -40,7 +42,8 @@ public class PlaylistPreviewConfig {
     }
 
     @Bean
-    public PlaylistConfirmationService playlistConfirmationService(PlaylistConverter spotifyToYoutubeConverter,
+    public PlaylistConfirmationService playlistConfirmationService(@Qualifier("spotifyToYoutubeConverter")
+                                                                       PlaylistConverter spotifyToYoutubeConverter,
                                                                    InMemoryPlaylistPreviewStore playlistPreviewStore) {
         return new PlaylistConfirmationService(spotifyToYoutubeConverter, playlistPreviewStore);
     }

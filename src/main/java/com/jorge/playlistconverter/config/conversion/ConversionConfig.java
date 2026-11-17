@@ -87,4 +87,24 @@ public class ConversionConfig {
                                                      TrackMatcher trackMatcher){
         return new PlaylistAnalyzer(youtubeMusicService, spotifyMusicService, trackMatcher);
     }
+
+    @Bean
+    public PlaylistConverter youtubeToSpotifyConverter(
+            @Qualifier("youtubeToSpotifyAnalyzer") PlaylistAnalyzer analyzer,
+            SpotifyMusicService spotifyMusicService,
+            PlaylistConversionValidator validator,
+            SyncStateStore store,
+            SyncRunTracker runTracker,
+            TrackSyncRecorder trackSyncRecorder){
+        var registry = new PlaylistDestinationRegistry(store, ConversionDirection.YOUTUBE_TO_SPOTIFY, validator);
+
+        var newPlaylistExecutor = new NewPlaylistExecutor(spotifyMusicService, validator,
+                registry, runTracker, trackSyncRecorder);
+
+        var existingPlaylistExecutor = new ExistingPlaylistExecutor(spotifyMusicService, validator,
+                registry, runTracker, trackSyncRecorder);
+
+        return new PlaylistConverter(analyzer, spotifyMusicService,
+                newPlaylistExecutor, existingPlaylistExecutor, validator);
+    }
 }

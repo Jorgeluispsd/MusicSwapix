@@ -59,6 +59,43 @@ class ConversionConfigTest {
         }
     }
 
+    @Test
+    void shouldPreviewNewSpotifyPlaylistWithMatchedTrackId() {
+        Song video = new Song("youtube-video", "Nightcall", "Kavinsky", 0);
+        Song track = new Song("spotify-track", "Nightcall", "Kavinsky", 258_000);
+
+        when(youtube.getPlaylistTracks("youtube-playlist")).thenReturn(List.of(video));
+        when(spotify.searchCandidates(video)).thenReturn(List.of(track));
+
+        try (var context = createContext()) {
+            var converter = context.getBean("youtubeToSpotifyConverter", PlaylistConverter.class);
+
+            var preview = converter.previewNewPlaylist("youtube-playlist");
+
+            assertEquals(List.of("spotify-track"), preview.newTrackIds());
+            verify(spotify, never()).createPlaylist(anyString(), any());
+        }
+    }
+
+    @Test
+    void shouldRecognizeTrackAlreadyInSpotifyDestinationWithoutSearching() {
+        Song video = new Song("youtube-video", "Nightcall", "Kavinsky", 258_000);
+        Song track = new Song("spotify-track", "Nightcall", "Kavinsky", 258_000);
+
+        when(youtube.getPlaylistTracks("youtube-playlist")).thenReturn(List.of(video));
+        when(spotify.getPlaylistTracksAlreadyAdded("spotify-playlist")).thenReturn(List.of(track));
+
+        try (var context = createContext()) {
+            var converter = context.getBean("youtubeToSpotifyConverter", PlaylistConverter.class);
+
+            var preview = converter.previewExistingPlaylist("youtube-playlist", "spotify-playlist");
+
+            assertEquals(1L, preview.alreadyPresentCount());
+            assertTrue(preview.newTrackIds().isEmpty());
+            verify(spotify, never()).searchCandidates(any());
+        }
+    }
+
     private AnnotationConfigApplicationContext createContext() {
         var context = new AnnotationConfigApplicationContext();
         context.registerBean(YoutubeMusicService.class, () -> youtube);
@@ -68,4 +105,5 @@ class ConversionConfigTest {
         context.refresh();
         return context;
     }
+
 }
