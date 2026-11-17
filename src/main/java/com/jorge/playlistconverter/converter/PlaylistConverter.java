@@ -32,7 +32,6 @@ public class PlaylistConverter {
         this.validator = Objects.requireNonNull(validator);
     }
 
-
     public PlaylistPreview previewNewPlaylist(String sourcePlaylistId) {
         List<MatchResult> matches = analyzer.analyze(sourcePlaylistId);
 

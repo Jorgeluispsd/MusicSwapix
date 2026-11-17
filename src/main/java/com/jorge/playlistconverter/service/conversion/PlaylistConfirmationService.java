@@ -47,7 +47,7 @@ public class PlaylistConfirmationService {
 
         previewStore.consume(previewId).orElseThrow(this::unavailablePreview);
 
-        return execute(stored, resolved);
+        return execute(stored, resolved).withDirection(stored.direction());
     }
 
     private PlaylistPreviewUnavailableException unavailablePreview(){

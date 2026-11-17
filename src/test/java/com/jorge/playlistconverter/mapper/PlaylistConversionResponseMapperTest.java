@@ -3,6 +3,7 @@ package com.jorge.playlistconverter.mapper;
 import com.jorge.playlistconverter.converter.ConversionResult;
 import com.jorge.playlistconverter.dto.response.PlaylistConversionResponse;
 import com.jorge.playlistconverter.dto.response.UnmatchedTrackResponse;
+import com.jorge.playlistconverter.enums.ConversionDirection;
 import com.jorge.playlistconverter.model.MatchResult;
 import com.jorge.playlistconverter.model.Song;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +87,19 @@ class PlaylistConversionResponseMapperTest {
         assertEquals(1, response.skippedByUserCount());
         assertEquals(1, response.notFoundCount());
         assertEquals("source-B", response.notFound().getFirst().sourceTrackId());
+    }
+
+    @Test
+    void shouldReturnSpotifyPlaylistUrlForReverseConversion() {
+        var result = new ConversionResult(
+                "youtube-playlist", "spotify-playlist", java.util.List.of(),
+                2, 0, ConversionDirection.YOUTUBE_TO_SPOTIFY);
+
+        var response = mapper.toResponse(result);
+
+        assertEquals(
+                "https://open.spotify.com/playlist/spotify-playlist",
+                response.destinationPlaylistUrl());
     }
 
     private MatchResult match(String sourceId, String videoId) {

@@ -67,7 +67,7 @@ class PlaylistConfirmationServiceTest {
 
         ConversionResult result = service.confirm(stored.id());
 
-        assertSame(expected, result);
+        assertEquals(expected, result);
         assertTrue(store.find(stored.id()).isEmpty());
 
         verify(converter).executeNewPlaylistPreview(newPlaylistPreview,
@@ -92,7 +92,7 @@ class PlaylistConfirmationServiceTest {
 
         ConversionResult result = service.confirm(stored.id());
 
-        assertSame(expected, result);
+        assertEquals(expected, result);
         assertTrue(store.find(stored.id()).isEmpty());
 
         verify(converter).executeExistingPlaylistPreview(preview);
@@ -132,7 +132,7 @@ class PlaylistConfirmationServiceTest {
         when(converter.executeNewPlaylistPreview(newPlaylistPreview, "Meu Rock",
                 PlaylistVisibility.PRIVATE)).thenReturn(expected);
 
-        assertSame(expected, service.confirm(stored.id()));
+        assertEquals(expected, service.confirm(stored.id()));
 
         assertThrows(PlaylistPreviewUnavailableException.class,
                 () -> service.confirm(stored.id()));
@@ -190,6 +190,12 @@ class PlaylistConfirmationServiceTest {
                 "source-playlist", "destination-playlist",
                 List.of(selected), Set.of());
 
+        when(converter.executeExistingPlaylistPreview(expectedPreview))
+                .thenReturn(new ConversionResult(
+                        expectedPreview.sourcePlaylistId(),
+                        expectedPreview.destinationPlaylistId(),
+                        expectedPreview.matches(), 1, 0));
+
         service.confirm(stored.id(), Map.of(0, "video-B"));
 
         verify(converter).executeExistingPlaylistPreview(expectedPreview);
@@ -216,6 +222,12 @@ class PlaylistConfirmationServiceTest {
                 stored.preview().destinationPlaylistId(),
                 List.of(stored.preview().matches().getFirst().skipByUser()),
                 stored.preview().existingDestinationIds());
+
+        when(converter.executeExistingPlaylistPreview(expected))
+                .thenReturn(new ConversionResult(
+                        expected.sourcePlaylistId(),
+                        expected.destinationPlaylistId(),
+                        expected.matches(), 0, 0));
 
         service.confirm(stored.id(), Map.of(), Set.of(0));
 
@@ -253,7 +265,17 @@ class PlaylistConfirmationServiceTest {
                 preview, "Minhas favoritas", PlaylistVisibility.PRIVATE,
                 ConversionDirection.YOUTUBE_TO_SPOTIFY);
 
-        service.confirm(stored.id());
+        var executionResult = new ConversionResult(
+                preview.sourcePlaylistId(), "spotify-created", preview.matches(),
+                0, 0);
+
+        when(reverseConverter.executeNewPlaylistPreview(
+                preview, "Minhas favoritas", PlaylistVisibility.PRIVATE))
+                .thenReturn(executionResult);
+
+        var result = service.confirm(stored.id());
+
+        assertEquals(ConversionDirection.YOUTUBE_TO_SPOTIFY, result.direction());
 
         verify(reverseConverter).executeNewPlaylistPreview(
                 preview, "Minhas favoritas", PlaylistVisibility.PRIVATE);
@@ -268,7 +290,16 @@ class PlaylistConfirmationServiceTest {
         var stored = store.save(preview, null, null,
                 ConversionDirection.YOUTUBE_TO_SPOTIFY);
 
-        service.confirm(stored.id());
+        var executionResult = new ConversionResult(
+                preview.sourcePlaylistId(), preview.destinationPlaylistId(),
+                preview.matches(), 0, 0);
+
+        when(reverseConverter.executeExistingPlaylistPreview(preview))
+                .thenReturn(executionResult);
+
+        var result = service.confirm(stored.id());
+
+        assertEquals(ConversionDirection.YOUTUBE_TO_SPOTIFY, result.direction());
 
         verify(reverseConverter).executeExistingPlaylistPreview(preview);
         verifyNoInteractions(converter);

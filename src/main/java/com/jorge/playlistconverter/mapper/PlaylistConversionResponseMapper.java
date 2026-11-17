@@ -24,10 +24,17 @@ public class PlaylistConversionResponseMapper {
                 .filter(MatchResult::skippedByUser)
                 .count();
 
-        return new PlaylistConversionResponse(result.sourcePlaylistId(),
-                result.destinationPlaylistId(),
-                "https://www.youtube.com/playlist?list="
-                + result.destinationPlaylistId(), result.insertedCount(),
+        return new PlaylistConversionResponse(result.sourcePlaylistId(), result.destinationPlaylistId(),
+                destinationPlaylistUrl(result), result.insertedCount(),
                 result.skippedCount(), notFound.size(), notFound, skippedByUserCount);
+    }
+
+    private String destinationPlaylistUrl(ConversionResult result){
+        return switch (result.direction()){
+            case SPOTIFY_TO_YOUTUBE ->
+                    "https://www.youtube.com/playlist?list=" + result.destinationPlaylistId();
+            case YOUTUBE_TO_SPOTIFY ->
+                    "https://open.spotify.com/playlist/" + result.destinationPlaylistId();
+        };
     }
 }

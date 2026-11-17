@@ -90,7 +90,7 @@ class PlaylistPreviewConfigTest {
 
             ConversionResult result = confirmation.confirm(stored.id());
 
-            assertSame(expected, result);
+            assertEquals(expected, result);
             assertTrue(store.find(stored.id()).isEmpty());
         });
 
