@@ -1,5 +1,6 @@
 package com.jorge.playlistconverter.converter.preview;
 
+import com.jorge.playlistconverter.enums.ConversionDirection;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,7 @@ class InMemoryPlaylistPreviewStoreTest {
         assertEquals(NOW.plus(LIFETIME), retrieved.expiresAt());
 
         assertEquals(saved, store.find(saved.id()).orElseThrow());
+        assertEquals(ConversionDirection.SPOTIFY_TO_YOUTUBE, saved.direction());
     }
 
     @Test
@@ -186,6 +188,19 @@ class InMemoryPlaylistPreviewStoreTest {
 
         assertThrows(NullPointerException.class,
                 () -> store.consume(null));
+    }
+
+    @Test
+    void shouldPreserveReverseDirectionWhenConsumingPreview() {
+        PlaylistPreview preview = new PlaylistPreview("youtube-playlist", java.util.List.of());
+
+        StoredPlaylistPreview saved = store.save(
+                preview, "Minha playlist", PlaylistVisibility.PRIVATE,
+                ConversionDirection.YOUTUBE_TO_SPOTIFY);
+
+        StoredPlaylistPreview consumed = store.consume(saved.id()).orElseThrow();
+
+        assertEquals(ConversionDirection.YOUTUBE_TO_SPOTIFY, consumed.direction());
     }
 
     private static Stream<Duration> invalidLifetimes() {

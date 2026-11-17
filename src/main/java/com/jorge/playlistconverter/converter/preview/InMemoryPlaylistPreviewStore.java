@@ -1,5 +1,6 @@
 package com.jorge.playlistconverter.converter.preview;
 
+import com.jorge.playlistconverter.enums.ConversionDirection;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 
 import java.time.Clock;
@@ -29,14 +30,20 @@ public class InMemoryPlaylistPreviewStore {
 
     public StoredPlaylistPreview save(PlaylistPreview preview, String destinationName,
                                       PlaylistVisibility visibility){
+        return save(preview, destinationName, visibility, ConversionDirection.SPOTIFY_TO_YOUTUBE);
+    }
+
+    public StoredPlaylistPreview save(PlaylistPreview preview, String destinationName,
+                                      PlaylistVisibility visibility, ConversionDirection direction){
         Objects.requireNonNull(preview, "A prévia deve ser informada.");
+        Objects.requireNonNull(direction, "A direção da conversão deve ser informada.");
 
         Instant now = clock.instant();
 
         removeExpired(now);
 
         StoredPlaylistPreview stored = new StoredPlaylistPreview(
-                UUID.randomUUID(), preview, destinationName, visibility, now.plus(lifetime));
+                UUID.randomUUID(), preview, destinationName, visibility, now.plus(lifetime), direction);
 
         previews.put(stored.id(), stored);
 
