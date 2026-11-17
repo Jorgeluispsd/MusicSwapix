@@ -33,11 +33,13 @@ public class PlaylistPreviewConfig {
     @Bean
     public PlaylistPreviewService playlistPreviewService(@Qualifier("spotifyToYoutubeConverter")
                                                              PlaylistConverter spotifyToYoutubeConverter,
+                                                         @Qualifier("youtubeToSpotifyConverter")
+                                                         PlaylistConverter youtubeToSpotifyConverter,
                                                          InMemoryPlaylistPreviewStore playlistPreviewStore,
                                                          SpotifyPlaylistParser spotifyPlaylistParser,
                                                          YoutubePlaylistParser youtubePlaylistParser,
                                                          PlaylistConversionValidator validator) {
-        return new PlaylistPreviewService(spotifyToYoutubeConverter, playlistPreviewStore,
+        return new PlaylistPreviewService(spotifyToYoutubeConverter, youtubeToSpotifyConverter, playlistPreviewStore,
                 spotifyPlaylistParser, youtubePlaylistParser, validator);
     }
 

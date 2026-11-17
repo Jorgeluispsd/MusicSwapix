@@ -5,6 +5,7 @@ import com.jorge.playlistconverter.converter.PlaylistConverter;
 import com.jorge.playlistconverter.converter.preview.InMemoryPlaylistPreviewStore;
 import com.jorge.playlistconverter.converter.preview.PlaylistPreview;
 import com.jorge.playlistconverter.converter.preview.StoredPlaylistPreview;
+import com.jorge.playlistconverter.enums.ConversionDirection;
 import com.jorge.playlistconverter.enums.PlaylistVisibility;
 import com.jorge.playlistconverter.errors.youtube.YoutubePlaylistReadException;
 import com.jorge.playlistconverter.errors.youtube.YoutubeSearchException;
@@ -30,13 +31,14 @@ class PlaylistPreviewServiceTest {
     private PlaylistConverter converter;
     private InMemoryPlaylistPreviewStore store;
     private PlaylistPreviewService service;
+    private final PlaylistConverter reverseConverter = mock(PlaylistConverter.class);
 
     @BeforeEach
     void setUp() {
         converter = mock(PlaylistConverter.class);
         store = mock(InMemoryPlaylistPreviewStore.class);
 
-        service = new PlaylistPreviewService(converter, store,
+        service = new PlaylistPreviewService(converter, reverseConverter, store,
                 new SpotifyPlaylistParser(), new YoutubePlaylistParser(), new PlaylistConversionValidator());
     }
 
@@ -157,5 +159,52 @@ class PlaylistPreviewServiceTest {
 
         verifyNoMoreInteractions(converter);
         verifyNoInteractions(store);
+    }
+
+    @Test
+    void shouldPrepareNewSpotifyPlaylistWithReverseDirection() {
+        String youtubeId = "PLyoutube1234567890";
+        var preview = new PlaylistPreview(youtubeId, java.util.List.of());
+        when(reverseConverter.previewNewPlaylist(youtubeId)).thenReturn(preview);
+
+        var reverseService = createReversePreviewService();
+        var stored = reverseService.prepareNewSpotifyPlaylist(
+                "https://www.youtube.com/playlist?list=" + youtubeId,
+                "  Minhas favoritas  ", PlaylistVisibility.PRIVATE);
+
+        assertSame(preview, stored.preview());
+        assertEquals("Minhas favoritas", stored.destinationName());
+        assertEquals(PlaylistVisibility.PRIVATE, stored.visibility());
+        assertEquals(ConversionDirection.YOUTUBE_TO_SPOTIFY, stored.direction());
+    }
+
+    @Test
+    void shouldUseYoutubeSourceAndSpotifyDestinationForExistingPreview() {
+        String youtubeId = "PLyoutube1234567890";
+        String spotifyId = "37i9dQZF1DXcBWIGoYBM5M";
+        var preview = new PlaylistPreview(
+                youtubeId, spotifyId, java.util.List.of(), java.util.Set.of());
+        when(reverseConverter.previewExistingPlaylist(youtubeId, spotifyId)).thenReturn(preview);
+
+        var reverseService = createReversePreviewService();
+        var stored = reverseService.prepareExistingSpotifyPlaylist(
+                "https://www.youtube.com/playlist?list=" + youtubeId,
+                "https://open.spotify.com/playlist/" + spotifyId);
+
+        assertSame(preview, stored.preview());
+        assertEquals(spotifyId, stored.preview().destinationPlaylistId());
+        assertEquals(ConversionDirection.YOUTUBE_TO_SPOTIFY, stored.direction());
+        assertNull(stored.destinationName());
+        assertNull(stored.visibility());
+    }
+
+    private PlaylistPreviewService createReversePreviewService() {
+        var previewStore = new InMemoryPlaylistPreviewStore(
+                java.time.Clock.systemUTC(), java.time.Duration.ofMinutes(10));
+
+        return new PlaylistPreviewService(
+                converter, reverseConverter, previewStore,
+                new SpotifyPlaylistParser(), new YoutubePlaylistParser(),
+                new PlaylistConversionValidator());
     }
 }

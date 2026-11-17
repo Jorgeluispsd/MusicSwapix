@@ -37,7 +37,10 @@ class PlaylistPreviewConfigTest {
 
         contextRunner = new ApplicationContextRunner()
                 .withUserConfiguration(PlaylistPreviewConfig.class)
-                .withBean("spotifyToYoutubeConverter", PlaylistConverter.class, () -> converter)
+                .withBean("spotifyToYoutubeConverter", PlaylistConverter.class,
+                        () -> converter)
+                .withBean("youtubeToSpotifyConverter", PlaylistConverter.class,
+                        () -> mock(PlaylistConverter.class))
                 .withBean(
                         PlaylistDestinationRegistry.class,
                         () -> mock(PlaylistDestinationRegistry.class))
