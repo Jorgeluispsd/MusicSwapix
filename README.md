@@ -1,6 +1,6 @@
 # MusicSwapix
 
-Ferramenta em Java para converter playlists do **Spotify para o YouTube**, com prévia antes de adicionar músicas. A conversão inversa está planejada.
+Ferramenta para converter playlists entre **Spotify e YouTube**, com prévia e revisão de faixas antes da confirmação.
 
 ## 💡 Motivação
 
@@ -24,7 +24,8 @@ Em desenvolvimento — construído em fases, cada uma validada antes de avançar
 - [x] API local para consultar destinos anteriores, gerar prévia, confirmar e cancelar
 - [x] Interface Angular com revisão de faixas e histórico
 - [x] PostgreSQL via Docker Compose para desenvolvimento local
-- [ ] Conversão inversa (YouTube → Spotify)
+- [x] Conversão YouTube → Spotify para playlist nova ou existente
+- [x] Leitura de playlists privadas do YouTube com autorização Google
 
 ## ⚙️ Como funciona
 
@@ -118,7 +119,7 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
 
    Abra [MusicSwapix local](http://localhost:4200).
 
-Para operações que exigem autorização do YouTube, configure um cliente OAuth do tipo **App para computador** no Google Cloud e salve seu JSON em `~/.playlist-converter/google-client-secret.json`. Se o app estiver em teste, inclua a conta usada na lista de usuários de teste.
+Para operações que exigem autorização do YouTube, incluindo a leitura de playlists privadas, configure um cliente OAuth do tipo **App para computador** no Google Cloud e salve seu JSON em `~/.playlist-converter/google-client-secret.json`. Autorize uma conta que tenha acesso à playlist. Se o app estiver em teste, inclua essa conta na lista de usuários de teste.
 
 A aplicação inicia a API em `127.0.0.1:8080` por padrão. Consulte o [guia da API local](docs/API.md) para testar o fluxo no Postman. A aplicação pode abrir o navegador local para autorização e reutiliza as sessões salvas quando disponíveis.
 
@@ -144,7 +145,7 @@ Quando recebe `quotaExceeded`, o YouTube lança uma exceção específica. No Sp
 
 ### Outras limitações
 
-- A conversão disponível é Spotify → YouTube. A direção inversa está planejada.
+- Em um teste de YouTube → Spotify, a prévia leu 216 faixas e encontrou 204 correspondências. A confirmação adicionou 200 faixas em dois lotes de 100, pulou 4 correspondências repetidas e deixou 12 faixas sem correspondência. Esse resultado corresponde a uma execução com a configuração testada.
 - A busca pode omitir uma faixa existente. A prévia permite revisar alternativas disponíveis e pular faixas.
 - A prévia expira e fica em memória. Se a inserção for interrompida, confira o destino antes de tentar novamente.
 

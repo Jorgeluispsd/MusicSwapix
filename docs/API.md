@@ -1,11 +1,12 @@
 # API local de conversão
 
-Por padrão, a aplicação atende em `http://127.0.0.1:8080`. As rotas de prévia identificam a direção da conversão. A interface Angular usa atualmente Spotify → YouTube; o fluxo inverso está em integração e validação.
+Por padrão, a aplicação atende em `http://127.0.0.1:8080`. A API e a interface Angular oferecem os fluxos Spotify → YouTube e YouTube → Spotify. As rotas de prévia identificam a direção da conversão.
 
 | Método e rota | Entrada | Sucesso |
 | --- | --- | --- |
 | `GET /api/status` | Sem corpo | `200` com `{"status":"UP"}` |
 | `GET /api/conversions/destinations` | Parâmetro `sourcePlaylist` com link ou ID do Spotify | `200` com uma lista de `destinationPlaylistId` |
+| `GET /api/conversions/destinations/youtube-to-spotify` | Parâmetro `sourcePlaylist` com link ou ID do YouTube | `200` com uma lista de IDs de destino no Spotify |
 | `POST /api/conversions/previews/spotify-to-youtube/new` | JSON com `sourcePlaylist`, `destinationName` e `visibility` opcional | `200` com a prévia |
 | `POST /api/conversions/previews/spotify-to-youtube/existing` | JSON com `sourcePlaylist` e `destinationPlaylist` | `200` com a prévia |
 | `POST /api/conversions/previews/youtube-to-spotify/new` | Origem YouTube, nome e visibilidade do novo destino Spotify | `200` com a prévia |
@@ -15,7 +16,7 @@ Por padrão, a aplicação atende em `http://127.0.0.1:8080`. As rotas de prévi
 
 ## Testar no Postman
 
-1. Para consultar destinos anteriores, use `GET /api/conversions/destinations`. Na aba **Params**, preencha `sourcePlaylist` com o link ou ID do Spotify. O histórico pode retornar vários destinos ou `[]`. A consulta usa o banco local. A disponibilidade no YouTube é verificada ao gerar a prévia para um destino selecionado.
+1. Para consultar destinos anteriores, escolha a rota `GET` da direção desejada na tabela. Na aba **Params**, preencha `sourcePlaylist` com o link ou ID da origem. O histórico consulta o banco local e pode retornar vários destinos ou `[]`. A disponibilidade da playlist de destino é verificada ao gerar a prévia.
 2. Escolha uma das rotas de prévia. Na aba **Body**, selecione **raw → JSON** e envie o corpo correspondente abaixo.
 3. Revise `matches`, `notFound`, `alreadyPresent` e `newTrackCount`. Copie o `previewId` da resposta.
 4. Use esse UUID para confirmar ou cancelar. A prévia expira em 10 minutos por padrão e fica indisponível após reiniciar a aplicação. A confirmação consome o UUID antes de iniciar a execução.
@@ -66,7 +67,9 @@ Para usar uma playlist existente no Spotify, envie para `POST /api/conversions/p
 }
 ```
 
-A confirmação e o cancelamento usam as mesmas rotas nos dois sentidos. A direção fica guardada no servidor junto com o ID da prévia. A resposta de confirmação ainda está em ajuste para gerar o link do Spotify no fluxo inverso.
+A confirmação e o cancelamento usam as mesmas rotas nos dois sentidos. A direção fica guardada no servidor junto com o ID da prévia. A confirmação devolve `destinationPlaylistUrl` na plataforma de destino.
+
+Para playlists privadas do YouTube, use uma conta Google autorizada que tenha acesso à origem. Quando a leitura com a chave da API sinaliza que a playlist ou seus itens estão inacessíveis, o aplicativo tenta a leitura com a sessão Google. Se necessário, ele solicita autorização no navegador.
 
 ## Respostas de erro
 
@@ -81,7 +84,7 @@ Para os erros tratados, a API devolve `status`, `code`, `message`, `path` e `fie
 | `422` | `NO_TRACKS_TO_INSERT` | Prévia para criação de playlist sem músicas para inserir |
 | `429` | `YOUTUBE_QUOTA_EXCEEDED`, `SPOTIFY_RATE_LIMITED` | Limite do provedor. O Spotify pode incluir `Retry-After` |
 | `500` | `SYNC_STATE_STORAGE_FAILED` | Falha de acesso ao histórico local |
-| `502` | `SPOTIFY_PLAYLIST_READ_FAILED`, `YOUTUBE_PLAYLIST_READ_FAILED`, `YOUTUBE_SEARCH_FAILED`, `YOUTUBE_PLAYLIST_CREATION_FAILED`, `YOUTUBE_TRACK_INSERTION_FAILED` | Falha em uma operação da plataforma |
+| `502` | `SPOTIFY_PLAYLIST_READ_FAILED`, `YOUTUBE_PLAYLIST_READ_FAILED`, `YOUTUBE_SEARCH_FAILED`, `YOUTUBE_PLAYLIST_CREATION_FAILED`, `YOUTUBE_TRACK_INSERTION_FAILED`, `SPOTIFY_TRACK_INSERTION_FAILED` | Falha em uma operação da plataforma |
 | `504` | `AUTHORIZATION_TIMEOUT` | O prazo para autorizar acabou |
 
 Se a confirmação falhar durante a escrita ou o registro do histórico, confira a playlist na plataforma de destino antes de gerar outra prévia. Parte da escrita pode ter sido concluída.
