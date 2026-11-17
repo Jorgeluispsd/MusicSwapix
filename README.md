@@ -69,6 +69,45 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
 - Conta Spotify **Premium** (exigido pelo Development Mode da Spotify para acesso à API)
 - Conta Google (para gerar uma chave da YouTube Data API v3)
 
+### Credenciais do Spotify
+
+1. Entre no [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) e clique em **Create app**. Preencha o nome e a descrição, selecione **Web API** e aceite os termos.
+2. Cadastre o **callback obrigatório do Spotify** no campo **Redirect URIs** do app. Se o app já estiver criado, abra **Settings → Edit**. Cole o endereço abaixo, clique em **Add** e salve.
+
+   ```text
+   http://127.0.0.1:8888/callback
+   ```
+
+   No `.env` da raiz do MusicSwapix, deixe a linha exatamente assim:
+
+   ```dotenv
+   SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/callback
+   ```
+
+   Use `127.0.0.1`, a porta `8888` e o caminho `/callback` nos dois lugares. Mantenha o MusicSwapix rodando enquanto autoriza no navegador. É para esse endereço que o Spotify envia o navegador após a autorização.
+3. Abra **Settings** no app criado. Copie **Client ID** para `SPOTIFY_CLIENT_ID` e use **View client secret** para copiar o segredo para `SPOTIFY_CLIENT_SECRET`.
+4. Em **Users Management**, verifique se a conta que fará o login está autorizada. Para testar com outra conta em modo de desenvolvimento, adicione o nome e o e-mail associado à conta Spotify.
+
+[Criação de apps](https://developer.spotify.com/documentation/web-api/concepts/apps) · [Regras de redirect URI](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri)
+
+### Chave da API do YouTube
+
+1. Abra o [Google Cloud Console](https://console.cloud.google.com/) e crie ou selecione um projeto no seletor do topo.
+2. Em **APIs e serviços → Biblioteca**, pesquise **YouTube Data API v3**, abra a página da API e clique em **Ativar**.
+3. No mesmo projeto, abra **APIs e serviços → Credenciais → Criar credenciais → Chave de API**. Em **Restrições de API**, selecione **YouTube Data API v3** e salve.
+4. Copie o valor da chave para `YOUTUBE_API_KEY` no `.env`. O MusicSwapix usa essa chave nas buscas e na leitura de playlists públicas.
+
+[Guia de chaves do Google Cloud](https://docs.cloud.google.com/docs/authentication/api-keys)
+
+### Autorização Google para playlists privadas e escrita
+
+1. No mesmo projeto, abra **Google Auth Platform**. Se for a primeira vez, clique em **Começar** e preencha o nome do app, o e-mail de suporte e o e-mail de contato. Para testar com uma conta pessoal, escolha **Externo** em **Público-alvo**.
+2. Em **Público-alvo → Usuários de teste**, adicione a conta Google que você usará no MusicSwapix enquanto o app estiver em teste. Para ler uma playlist privada, use uma conta com acesso a ela.
+3. Em **Clientes → Criar cliente**, escolha **App para computador**, dê um nome ao cliente e clique em **Criar**. Para esse tipo de cliente, pule o cadastro manual de callback. O MusicSwapix abre um endereço local temporário quando inicia a autorização do Google.
+4. Baixe o JSON do cliente OAuth e salve-o como `~/.playlist-converter/google-client-secret.json`. No Windows, o caminho é `%USERPROFILE%\.playlist-converter\google-client-secret.json`. Crie a pasta se necessário. Mantenha o JSON fora do repositório.
+
+O JSON é a credencial usada para pedir autorização no navegador. A chave em `YOUTUBE_API_KEY` continua sendo usada nas consultas públicas. [Guia oficial de OAuth para aplicativos instalados](https://developers.google.com/identity/protocols/oauth2/native-app)
+
 ### Setup
 
 1. Clone o repositório:
@@ -77,11 +116,7 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
    cd MusicSwapix
    ```
 
-2. Crie um app em [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) e, em *Users Management*, adicione o e-mail da conta Spotify que você vai usar para testar (obrigatório em Development Mode — limite de 5 usuários autorizados por app).
-
-3. Crie um projeto no [Google Cloud Console](https://console.cloud.google.com/), ative a **YouTube Data API v3** e gere uma chave de API.
-
-4. Copie `.env.example` para `.env` e preencha com suas credenciais:
+2. Na raiz do clone, copie `.env.example` para `.env`, ao lado de `pom.xml` e `docker-compose.yaml`. Preencha com suas credenciais e escolha uma senha local para o banco.
    ```
    SPOTIFY_CLIENT_ID=
    SPOTIFY_CLIENT_SECRET=
@@ -90,7 +125,7 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
    POSTGRES_PASSWORD='senha-local-de-exemplo'
    ```
 
-5. No Windows, abra o Docker Desktop e aguarde o motor iniciar. No terminal, na raiz do clone (a pasta que contém o `docker-compose.yaml` e o `.env`), execute:
+3. No Windows, abra o Docker Desktop e aguarde o motor iniciar. No terminal, na raiz do clone (a pasta que contém o `docker-compose.yaml` e o `.env`), execute:
 
    ```powershell
    docker compose up -d postgres
@@ -99,7 +134,7 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
 
    O PostgreSQL deve aparecer como `Up`. Se a porta `5432` já estiver ocupada por outro contêiner, pare-o antes de subir o banco deste clone. O PostgreSQL aplica a senha do `.env` ao inicializar um volume novo. Para um banco já inicializado, use a senha que está configurada nele.
 
-6. No IntelliJ, abra diretamente a pasta clonada que contém o `pom.xml`. Aguarde a importação do Maven e selecione **Java 21** em **File → Project Structure → Project SDK**. Rode o método `main` de `PlaylistConverterApplication` com o diretório de trabalho apontando para a raiz do clone.
+4. No IntelliJ, abra diretamente a pasta clonada que contém o `pom.xml`. Aguarde a importação do Maven e selecione **Java 21** em **File → Project Structure → Project SDK**. Rode o método `main` de `PlaylistConverterApplication` com o diretório de trabalho apontando para a raiz do clone.
 
    Se você tem o Maven no PATH, também pode rodar da raiz pelo terminal:
 
@@ -109,7 +144,7 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
 
    Se o terminal informar que `mvn` não é reconhecido, use o botão **Run** do IntelliJ ou pressione **Ctrl duas vezes** no IntelliJ e execute `mvn spring-boot:run` pelo **Run Anything**.
 
-7. Em outro terminal, instale as dependências do front e inicie o Angular.
+5. Em outro terminal, instale as dependências do front e inicie o Angular.
 
    ```powershell
    cd frontend
@@ -118,8 +153,6 @@ O matcher compara os candidatos e aplica regras para versões diferentes. A pont
    ```
 
    Abra [MusicSwapix local](http://localhost:4200).
-
-Para operações que exigem autorização do YouTube, incluindo a leitura de playlists privadas, configure um cliente OAuth do tipo **App para computador** no Google Cloud e salve seu JSON em `~/.playlist-converter/google-client-secret.json`. Autorize uma conta que tenha acesso à playlist. Se o app estiver em teste, inclua essa conta na lista de usuários de teste.
 
 A aplicação inicia a API em `127.0.0.1:8080` por padrão. Consulte o [guia da API local](docs/API.md) para testar o fluxo no Postman. A aplicação pode abrir o navegador local para autorização e reutiliza as sessões salvas quando disponíveis.
 
