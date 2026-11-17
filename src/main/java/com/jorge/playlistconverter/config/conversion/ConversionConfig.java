@@ -11,6 +11,7 @@ import com.jorge.playlistconverter.matcher.TrackMatcher;
 import com.jorge.playlistconverter.spotify.SpotifyMusicService;
 import com.jorge.playlistconverter.state.SyncStateStore;
 import com.jorge.playlistconverter.youtube.YoutubeMusicService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -30,7 +31,8 @@ public class ConversionConfig {
     }
 
     @Bean
-    public PlaylistConverter spotifyToYoutubeConverter(PlaylistAnalyzer spotifyToYoutubeAnalyzer,
+    public PlaylistConverter spotifyToYoutubeConverter(@Qualifier("spotifyToYoutubeAnalyzer")
+                                                           PlaylistAnalyzer spotifyToYoutubeAnalyzer,
                                                        YoutubeMusicService youtubeMusicService,
                                                        NewPlaylistExecutor youtubeNewPlaylistExecutor,
                                                        ExistingPlaylistExecutor youtubeExistingPlaylistExecutor,
@@ -77,5 +79,12 @@ public class ConversionConfig {
     @Bean
     public TrackSyncRecorder trackSyncRecorder(SyncStateStore store) {
         return new TrackSyncRecorder(store);
+    }
+
+    @Bean
+    public PlaylistAnalyzer youtubeToSpotifyAnalyzer(YoutubeMusicService youtubeMusicService,
+                                                     SpotifyMusicService spotifyMusicService,
+                                                     TrackMatcher trackMatcher){
+        return new PlaylistAnalyzer(youtubeMusicService, spotifyMusicService, trackMatcher);
     }
 }
