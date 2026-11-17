@@ -14,6 +14,7 @@ import com.jorge.playlistconverter.errors.input.InvalidPlaylistInputException;
 import com.jorge.playlistconverter.errors.persistence.SyncStateStorageException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyPlaylistReadException;
 import com.jorge.playlistconverter.errors.spotify.SpotifyRequestLimitException;
+import com.jorge.playlistconverter.errors.spotify.SpotifyTrackInsertionException;
 import com.jorge.playlistconverter.errors.youtube.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
@@ -246,6 +247,14 @@ public class ApiExceptionHandler {
                         "O YouTube limitou as buscas. Aguarde um pouco antes de tentar novamente.",
                         request.getRequestURI(),
                         List.of()));
+    }
+
+    @ExceptionHandler(SpotifyTrackInsertionException.class)
+    public ResponseEntity<ApiErrorResponse> handleSpotifyTrackInsertion(HttpServletRequest request){
+        return platformFailure("SPOTIFY_TRACK_INSERTION_FAILED",
+                "Não foi possível concluir a inserção das músicas no Spotify. "
+                        + "Algumas músicas podem ter sido inseridas. "
+                        + "Confira o destino e gere uma nova prévia antes de continuar.", request);
     }
 
     private ResponseEntity<ApiErrorResponse> platformFailure(String code, String message, HttpServletRequest request){

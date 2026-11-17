@@ -328,10 +328,12 @@ export class ConversionPage {
             return;
           }
 
-          if (code === 'YOUTUBE_TRACK_INSERTION_FAILED') {
+          const destination = this.destinationPlatform();
+
+          if (code === 'YOUTUBE_TRACK_INSERTION_FAILED' || code === 'SPOTIFY_TRACK_INSERTION_FAILED') {
             const nextStep = stored.destinationPlaylistId !== null
-              ? 'Confira a playlist no YouTube e gere uma nova prévia com o mesmo destino.'
-              : 'Localize a playlist criada no YouTube, selecione Playlist existente e gere uma nova prévia com o link dela.';
+              ? `Confira a playlist no ${destination} e gere uma nova prévia com o mesmo destino.`
+              : `Localize a playlist criada no ${destination}, selecione Playlist existente e gere uma nova prévia com o link dela.`;
 
             this.errorMessage.set(
               'A conversão foi interrompida durante a inserção. '
@@ -343,10 +345,10 @@ export class ConversionPage {
 
           this.errorMessage.set(
             'Não foi possível confirmar o resultado da conversão. '
-            + 'Confira a playlist no YouTube antes de gerar uma nova prévia, '
+            + `Confira a playlist no ${destination} antes de gerar uma nova prévia, `
             + 'pois alterações podem já ter sido feitas.',
           );
-        },
+        }
       });
   }
 
@@ -417,6 +419,14 @@ export class ConversionPage {
     const seconds = String(totalSeconds % 60).padStart(2, '0');
 
     return `${minutes}:${seconds}`;
+  }
+
+  destinationTrackUrl(trackId: string): string {
+    const id = encodeURIComponent(trackId);
+
+    return this.isSpotifyDestination()
+      ? `https://open.spotify.com/track/${id}`
+      : `https://www.youtube.com/watch?v=${id}`;
   }
 
   private clearPreview(): void {

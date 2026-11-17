@@ -300,10 +300,10 @@
                     </label>
 
                     <a
-                      [href]="'https://www.youtube.com/watch?v=' + option.destinationTrackId"
+                      [href]="destinationTrackUrl(option.destinationTrackId)"
                       target="_blank"
                       rel="noopener noreferrer"
-                    >Abrir vídeo ↗</a>
+                    >Abrir no {{ destinationPlatform() }} ↗</a>
                   </div>
                 }
               </fieldset>

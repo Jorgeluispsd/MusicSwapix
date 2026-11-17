@@ -39,7 +39,35 @@ public class YoutubeMusicService implements MusicService {
 
     @Override
     public List<Song> getPlaylistTracks(String playlistId) {
-        return readPlaylistTracks(youtube, playlistId, apiKey);
+        try {
+            return readPlaylistTracks(youtube, playlistId, apiKey);
+
+        }catch (YoutubePlaylistReadException e){
+            if (!shouldRetryWithGoogleAccount(e)){
+                throw e;
+            }
+
+            YouTube authenticatedYoutube = authenticatedClientFactory.create();
+            return readPlaylistTracks(authenticatedYoutube, playlistId, null);
+        }
+    }
+
+    private boolean shouldRetryWithGoogleAccount(YoutubePlaylistReadException exception){
+        if (!(exception.getCause() instanceof GoogleJsonResponseException response)){
+            return false;
+        }
+
+        if (response.getStatusCode() == 404){
+            return true;
+        }
+
+        var details = response.getDetails();
+
+        return response.getStatusCode() == 403
+                && details != null
+                && details.getErrors() != null
+                && details.getErrors().stream().anyMatch(error -> error != null
+                        && "playlistItemsNotAccessible".equals(error.getReason()));
     }
 
     private List<Song> readPlaylistTracks(YouTube client, String playlistId, String requestApiKey){
@@ -156,7 +184,6 @@ public class YoutubeMusicService implements MusicService {
             log.debug("Falha de comunicação na busca do YouTube. Tipo: {}", e.getClass().getSimpleName());
             throw new YoutubeSearchException("Falha de comunicação ao buscar candidatos no YouTube.", e);
         }
-        // Os candidatos retornados são comparados pelo TrackMatcher fora deste serviço.
     }
 
     private boolean isQuotaExceeded(GoogleJsonResponseException exception){
